@@ -255,18 +255,23 @@ select {
   flex: 0 0 auto;
 }
 .sort-control select {
+  appearance: none;
+  -webkit-appearance: none;
+  color-scheme: dark;
   width: 100%;
   border: 0;
   outline: 0;
-  background: #10171a;
-  color: #b8c6ca;
-  padding-left: 7px;
+  background-color: #10171a !important;
+  color: #d7e1e4 !important;
+  -webkit-text-fill-color: #d7e1e4;
+  padding: 5px 7px;
+  border-radius: 6px;
   font-size: 11px;
   cursor: pointer;
 }
 .sort-control option {
-  background: #10171a;
-  color: #e2e9eb;
+  background-color: #10171a !important;
+  color: #e2e9eb !important;
 }
 .search {
   height: 37px;

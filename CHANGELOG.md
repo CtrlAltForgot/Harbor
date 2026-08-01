@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Forced WebKit's native sort selector into Harbor's dark color scheme so the selected value and menu options remain readable on Nobara.
 - Removed torrent archiving: manual removal now deletes the Harbor record, permits the same info hash to be added again, and migration 2 purges all legacy archived records automatically.
 - Stopped live synchronization from reordering torrent rows, added a persistent sort control, and made creation time the stable default ordering in both the API and desktop.
 - Made qBittorrent authoritative for live state: submissions, pause/resume, and removal now require engine confirmation; missing jobs become explicit failures with zero live speed. Added safe optional staging-file deletion during removal and corrected dashed season-pack titles so separately downloaded seasons converge on one show folder.
