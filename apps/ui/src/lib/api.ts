@@ -152,7 +152,7 @@ export const api = {
       body: JSON.stringify({ retention }),
     }),
   remove: (id: string, deleteFiles = false) =>
-    request<Torrent>(`/api/v1/torrents/${id}`, {
+    request<void>(`/api/v1/torrents/${id}`, {
       method: "DELETE",
       body: JSON.stringify({ deleteFiles }),
     }),

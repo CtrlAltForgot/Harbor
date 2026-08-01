@@ -16,6 +16,17 @@ export class Store {
       CREATE TABLE IF NOT EXISTS torrents(id TEXT PRIMARY KEY, info_hash TEXT NOT NULL UNIQUE, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL, torrent_id TEXT, detail TEXT NOT NULL, created_at TEXT NOT NULL);`);
     this.db.prepare("INSERT OR IGNORE INTO schema_migrations VALUES (1, ?)").run(new Date().toISOString());
+    const archiveMigration = this.db
+      .prepare("SELECT 1 FROM schema_migrations WHERE version=2")
+      .get();
+    if (!archiveMigration) {
+      this.db
+        .prepare("DELETE FROM torrents WHERE json_extract(payload, '$.status')='removed'")
+        .run();
+      this.db
+        .prepare("INSERT INTO schema_migrations VALUES (2, ?)")
+        .run(new Date().toISOString());
+    }
   }
   issueToken(label: string) { const token = `hbr_${randomBytes(24).toString("base64url")}`; this.db.prepare("INSERT INTO tokens VALUES (?, ?, ?, ?, NULL)").run(randomBytes(8).toString("hex"), hash(token), label, new Date().toISOString()); return token; }
   validToken(token: string) { return !!this.db.prepare("SELECT 1 FROM tokens WHERE token_hash=? AND revoked_at IS NULL").get(hash(token)); }
@@ -25,7 +36,7 @@ export class Store {
   setting(key: string) { return (this.db.prepare("SELECT value FROM settings WHERE key=?").get(key) as {value:string}|undefined)?.value; }
   setSetting(key: string, value: string) { this.db.prepare("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(key,value); }
   save(torrent: Torrent) { this.db.prepare("INSERT INTO torrents VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload, updated_at=excluded.updated_at").run(torrent.id, torrent.infoHash, JSON.stringify(torrent), new Date().toISOString()); }
-  remove(id: string) { this.db.prepare("DELETE FROM torrents WHERE id=?").run(id); this.audit("torrent.removed", id, {}); }
+  remove(id: string, detail: unknown = {}) { this.db.prepare("DELETE FROM torrents WHERE id=?").run(id); this.audit("torrent.removed", id, detail); }
   audit(action: string, torrentId: string | null, detail: unknown) { this.db.prepare("INSERT INTO audit(action,torrent_id,detail,created_at) VALUES(?,?,?,?)").run(action, torrentId, JSON.stringify(detail), new Date().toISOString()); }
   close() { this.db.close(); }
 }

@@ -79,9 +79,9 @@ New torrents default to **Organize and clean downloads**. Harbor copies into the
 
 The add sheet accepts either one magnet or multiple magnet links copied together from another torrent client. Paste the complete newline-separated block; Harbor shows the number of unique torrents detected and applies the selected category and retention rule to each. A duplicate or invalid entry is reported independently and does not cancel the other additions.
 
-Harbor's queue, organized entries, archived removals, settings, and audit records are stored in SQLite under the persistent Unraid `/config` mapping. Closing the desktop or restarting the Harbor container does not clear this history. **Remove torrent & archive history** removes the qBittorrent job without deleting its Harbor history entry or downloaded data.
+Harbor's queue, organized entries, settings, and audit records are stored in SQLite under the persistent Unraid `/config` mapping. Closing the desktop or restarting the Harbor container does not clear these entries. Deliberately choosing **Remove torrent** deletes that torrent from both qBittorrent and Harbor, so its magnet may be added again later. Updating to release 10 automatically purges records created by the short-lived archived-removal behavior.
 
-Removing a torrent opens a confirmation screen with **Also delete original downloaded files** disabled by default. When enabled, Harbor permits deletion only for the torrent path inside its configured incomplete-download directory. A verified organized Movies/TV library copy is outside that boundary and is never deleted by this action.
+Removing a torrent opens a confirmation screen with **Also delete original downloaded files** disabled by default. When enabled, Harbor permits deletion only for the torrent path inside its configured incomplete-download directory. A verified organized Movies/TV library copy is outside that boundary and is never deleted by this action. With or without the checkbox, the removed torrent is no longer retained in Harbor's list.
 
 For television, separate downloads are consolidated as `TV Shows/Show Name/Season NN/Show Name - SnnEnn.ext`. Existing show and season folders are reused, new episodes are merged only after collision checks, and Harbor never overwrites an existing episode. Season-pack names such as `The First 48 - Season 3`, `Season 5`, and `Season 6` normalize to the same `The First 48` show directory.
 
@@ -100,7 +100,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-bfcce8eb3fcb4de0e75e144aee5bfe9bc359a549e8b954a4a48b5576a10d5531
+fa86e86296f151f9d178caf01b55d0618d76bc815d2aa92e253d01412713c523
 ```
 
 ## Step 4: pair

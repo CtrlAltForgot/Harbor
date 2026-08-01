@@ -548,20 +548,11 @@ export async function buildApp(overrides: Partial<Config> = {}) {
       }
       await qbit.remove(current.infoHash, parsed.data.deleteFiles);
     }
-    const archived: Torrent = {
-      ...current,
-      status: "removed",
-      downloadSpeed: 0,
-      uploadSpeed: 0,
-      etaSeconds: null,
-      error: undefined,
-    };
-    store.save(archived);
-    store.audit("torrent.archived", id, {
+    store.remove(id, {
       downloadedDataDeleted: parsed.data.deleteFiles,
     });
-    broadcast({ type: "torrent.updated", torrent: archived });
-    return archived;
+    broadcast({ type: "torrent.removed", torrentId: id });
+    return reply.code(204).send();
   });
   app.get("/api/v1/events", { websocket: true }, (socket) => {
     clients.add(socket);
@@ -587,7 +578,7 @@ export async function buildApp(overrides: Partial<Config> = {}) {
           const found = byHash.get(torrent.infoHash.toLowerCase());
           if (!found) {
             if (
-              !["organized", "removed"].includes(torrent.status)
+              torrent.status !== "organized"
             ) {
               const missing: Torrent = {
                 ...torrent,

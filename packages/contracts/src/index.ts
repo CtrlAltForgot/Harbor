@@ -18,7 +18,6 @@ export type TorrentStatus =
   | "processing"
   | "review"
   | "organized"
-  | "removed"
   | "failed";
 export type RetentionPolicy = "seed" | "stop" | "remove" | "ask";
 

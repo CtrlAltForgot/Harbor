@@ -2,9 +2,10 @@
 
 ## 0.1.0 — Unreleased
 
+- Removed torrent archiving: manual removal now deletes the Harbor record, permits the same info hash to be added again, and migration 2 purges all legacy archived records automatically.
 - Stopped live synchronization from reordering torrent rows, added a persistent sort control, and made creation time the stable default ordering in both the API and desktop.
 - Made qBittorrent authoritative for live state: submissions, pause/resume, and removal now require engine confirmation; missing jobs become explicit failures with zero live speed. Added safe optional staging-file deletion during removal and corrected dashed season-pack titles so separately downloaded seasons converge on one show folder.
-- Added multi-magnet clipboard import with info-hash deduplication and independent per-torrent failure handling, and changed manual torrent removal to preserve an archived history record across restarts.
+- Added multi-magnet clipboard import with info-hash deduplication and independent per-torrent failure handling.
 - Added an authentication-independent Connection & Pairing settings panel so a changed Unraid pairing code or address can be replaced without locking the desktop out; RPM release 6 includes the recovery flow.
 - Fixed immediate desktop exits caused by WebKitGTK Wayland DMA-BUF protocol errors on Nobara; RPM release 2 enables the compatible renderer automatically.
 - Removed the accidental Build Plan development overlay and moved desktop API calls to native Rust networking to avoid WebKit LAN-request failures; RPM release 3 provides actionable pairing errors.

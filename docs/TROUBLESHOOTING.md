@@ -38,7 +38,7 @@ The Unraid pairing code changed after this desktop was paired. Select **Attentio
 
 ## Harbor and qBittorrent show different active torrents
 
-Update both the Unraid companion and desktop to release 8 or newer. qBittorrent is authoritative for live state: Harbor confirms a submitted info hash appears before recording it, confirms pause/resume/removal, and marks a previously live but missing qBittorrent job as **Attention** with zero speed. Organized and archived history remains visible even though those jobs may intentionally no longer exist in qBittorrent.
+Update both the Unraid companion and desktop to release 10 or newer. qBittorrent is authoritative for live state: Harbor confirms a submitted info hash appears before recording it, confirms pause/resume/removal, and marks a previously live but missing qBittorrent job as **Attention** with zero speed. Organized history remains visible when qBittorrent was intentionally removed by the retention workflow; manually removed Harbor records do not remain visible.
 
 - Pairing fails: confirm the server URL, port 7331, and exact `HARBOR_PAIRING_CODE`. Check the companion log without sharing credentials.
 - UI shows disconnected: open `/health` on the server from the desktop. Harbor retries automatically.

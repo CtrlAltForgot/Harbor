@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import Database from "better-sqlite3";
 import { buildApp } from "../src/app.js";
 
 const dirs: string[] = [];
@@ -106,7 +107,7 @@ describe("companion API", () => {
     ).toHaveLength(1);
     await app.close();
   });
-  it("archives removed torrents and preserves their history across restart", async () => {
+  it("deletes removed torrents and permits the same torrent to be added again", async () => {
     const dataDir = mkdtempSync(path.join(tmpdir(), "harbor-test-"));
     dirs.push(dataDir);
     let app = await buildApp({ dataDir, pairingCode: "x", engine: "mock" });
@@ -125,22 +126,56 @@ describe("companion API", () => {
       url: `/api/v1/torrents/${added.json().id}`,
       headers: { authorization: auth },
     });
-    expect(removed.statusCode).toBe(200);
-    expect(removed.json().status).toBe("removed");
-    await app.close();
-
-    app = await buildApp({ dataDir, pairingCode: "x", engine: "mock" });
-    auth = `Bearer ${await tokenWith(app, "x")}`;
-    const history = await app.inject({
+    expect(removed.statusCode).toBe(204);
+    const empty = await app.inject({
       url: "/api/v1/torrents",
       headers: { authorization: auth },
     });
-    expect(history.json()).toEqual([
-      expect.objectContaining({
-        infoHash: "dddddddddddddddddddddddddddddddddddddddd",
-        status: "removed",
-      }),
-    ]);
+    expect(empty.json()).toEqual([]);
+    const readded = await app.inject({
+      method: "POST",
+      url: "/api/v1/torrents",
+      headers: { authorization: auth },
+      payload: {
+        magnet:
+          "magnet:?xt=urn:btih:dddddddddddddddddddddddddddddddddddddddd&dn=Archived.Show.S03",
+      },
+    });
+    expect(readded.statusCode).toBe(201);
+    await app.close();
+  });
+  it("purges legacy archived records during the version 2 migration", async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), "harbor-test-"));
+    dirs.push(dataDir);
+    let app = await buildApp({ dataDir, pairingCode: "x", engine: "mock" });
+    const auth = `Bearer ${await tokenWith(app, "x")}`;
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/torrents",
+      headers: { authorization: auth },
+      payload: {
+        magnet:
+          "magnet:?xt=urn:btih:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee&dn=Legacy.Archive",
+      },
+    });
+    await app.close();
+    const database = new Database(path.join(dataDir, "harbor.db"));
+    database
+      .prepare("UPDATE torrents SET payload=json_set(payload, '$.status', 'removed')")
+      .run();
+    database.prepare("DELETE FROM schema_migrations WHERE version=2").run();
+    database.close();
+
+    app = await buildApp({ dataDir, pairingCode: "x", engine: "mock" });
+    const nextAuth = `Bearer ${await tokenWith(app, "x")}`;
+    expect(
+      (
+        await app.inject({
+          url: "/api/v1/torrents",
+          headers: { authorization: nextAuth },
+        })
+      ).json(),
+    ).toEqual([]);
     await app.close();
   });
   it("validates media settings and never returns the TMDB token", async () => {

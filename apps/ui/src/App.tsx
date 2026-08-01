@@ -84,7 +84,7 @@ export function App() {
                 ["queued", "downloading"].includes(t.status)) ||
               (filter === "review" && t.status === "review") ||
               (filter === "complete" &&
-                ["organized", "completed", "removed"].includes(t.status))) &&
+              ["organized", "completed"].includes(t.status))) &&
             t.name.toLowerCase().includes(query.toLowerCase()),
         ),
         sort,
@@ -364,8 +364,6 @@ function TorrentRow({
             <em className="complete">
               <CheckCircle2 /> Organized
             </em>
-          ) : t.status === "removed" ? (
-            <em className="complete">Archived</em>
           ) : t.status === "failed" ? (
             <em className="failed-state" title={t.error}>
               <AlertTriangle /> Attention
@@ -375,7 +373,7 @@ function TorrentRow({
           )}
         </span>
         <div className="row-actions">
-          {!['removed', 'failed'].includes(t.status) && (
+          {t.status !== 'failed' && (
             <button
               className="icon-button"
               title={t.status === "paused" ? "Resume" : "Pause"}
@@ -384,8 +382,7 @@ function TorrentRow({
               {t.status === "paused" ? <Play /> : <Pause />}
             </button>
           )}
-          {t.status !== "removed" && (
-            <>
+          <>
           <button
             className="icon-button"
             onClick={() => setActionOpen(!actionOpen)}
@@ -437,12 +434,11 @@ function TorrentRow({
                   setRemoveOpen(true);
                 }}
               >
-                Remove torrent &amp; archive history
+                Remove torrent
               </button>
             </div>
           )}
             </>
-          )}
         </div>
       </article>
       {actionError && <div className="row-error">{actionError}</div>}
@@ -541,8 +537,8 @@ function RemoveTorrent({
           </button>
         </header>
         <p>
-          The torrent will be removed from qBittorrent and retained in Harbor
-          history.
+          The torrent will be removed from qBittorrent and deleted from Harbor.
+          You can add the same torrent again later.
         </p>
         <label className="delete-files-choice">
           <input
