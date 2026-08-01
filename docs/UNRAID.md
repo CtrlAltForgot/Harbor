@@ -24,7 +24,7 @@ Create a persistent appdata directory and temporary first-test category folders.
 /mnt/user/harbor-test/review
 ```
 
-Use test folders until organization has been verified with your share/cache/mover configuration.
+Harbor's download and organizer have passed a genuine Creative Commons torrent test. Using temporary folders for the first Unraid run is still recommended solely to confirm your share ownership and cache/mover configuration, not to validate Harbor's basic download path.
 
 ## 3. Configure Harbor
 

@@ -2,7 +2,7 @@
 
 Harbor is a personal homelab torrent controller for Nobara and Unraid. The desktop sends magnets or `.torrent` files to the Harbor companion; Harbor controls qBittorrent on the server, monitors transfers, classifies completed content, and copies it into configured media folders only after verifying the result.
 
-The repository is ready for its first real homelab test. Automated and isolated-container tests pass; a real media download has intentionally not been performed without the owner's choice of lawful test content and actual Unraid paths.
+The repository is ready for homelab use. In addition to automated tests, Harbor completed a genuine 129 MB Creative Commons torrent through qBittorrent, verified and organized all files, applied retention, and recovered history after restart. See [the validation record](docs/VALIDATION.md).
 
 ## What works
 
@@ -33,7 +33,7 @@ Follow [the Unraid guide](docs/UNRAID.md), then install the generated Nobara pac
 sudo dnf install ./apps/desktop/src-tauri/target/release/bundle/rpm/Harbor-0.1.0-1.x86_64.rpm
 ```
 
-Use a small lawful/public-domain torrent and choose a temporary test library mapping—not your only media copy—for the first organization run.
+Configure your actual Unraid mappings carefully. Harbor runs storage preflight and preserves staging data, but only your server can prove its share ownership and mover/cache behavior.
 
 ## Repository
 

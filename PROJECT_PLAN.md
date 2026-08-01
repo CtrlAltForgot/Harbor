@@ -30,7 +30,8 @@ The implementation is complete through the point that requires a user-selected r
 - [ ] Support global and per-torrent speed limits
 - [x] Support per-torrent speed limits through the API
 - [x] Recover Harbor state and pairing after a container restart
-- [ ] Test an actual payload and qBittorrent restart with a small lawful/public-domain torrent on Unraid (user test)
+- [x] Test a real 129 MB Creative Commons payload, organization, retention, and Harbor restart in Docker
+- [ ] Confirm the same container image against the user's actual Unraid mounts and mover/cache configuration
 
 Result: Harbor replaces the normal qBittorrent UI for everyday add/monitor/control use.
 
