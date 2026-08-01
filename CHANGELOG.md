@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Stopped live synchronization from reordering torrent rows, added a persistent sort control, and made creation time the stable default ordering in both the API and desktop.
 - Made qBittorrent authoritative for live state: submissions, pause/resume, and removal now require engine confirmation; missing jobs become explicit failures with zero live speed. Added safe optional staging-file deletion during removal and corrected dashed season-pack titles so separately downloaded seasons converge on one show folder.
 - Added multi-magnet clipboard import with info-hash deduplication and independent per-torrent failure handling, and changed manual torrent removal to preserve an archived history record across restarts.
 - Added an authentication-independent Connection & Pairing settings panel so a changed Unraid pairing code or address can be replaced without locking the desktop out; RPM release 6 includes the recovery flow.

@@ -85,6 +85,8 @@ Removing a torrent opens a confirmation screen with **Also delete original downl
 
 For television, separate downloads are consolidated as `TV Shows/Show Name/Season NN/Show Name - SnnEnn.ext`. Existing show and season folders are reused, new episodes are merged only after collision checks, and Harbor never overwrites an existing episode. Season-pack names such as `The First 48 - Season 3`, `Season 5`, and `Season 6` normalize to the same `The First 48` show directory.
 
+The downloads list defaults to **Newest added**, which is stable: progress and status refreshes never move existing rows. The sort selector also supports oldest added, name, progress, and status, and remembers the chosen order on that desktop.
+
 ## Step 3: install Harbor Desktop on Nobara
 
 Open a terminal on the Nobara PC. Download Harbor and run the desktop installer:
@@ -98,7 +100,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-9a7772c9744b03a6ca66fafbdaded58f0dfe16e2efef5cb343127211e4c82f12
+bfcce8eb3fcb4de0e75e144aee5bfe9bc359a549e8b954a4a48b5576a10d5531
 ```
 
 ## Step 4: pair

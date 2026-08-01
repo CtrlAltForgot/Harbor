@@ -8,6 +8,7 @@ import type {
 import {
   AlertTriangle,
   Anchor,
+  ArrowUpDown,
   CheckCircle2,
   Download,
   FolderCheck,
@@ -26,6 +27,7 @@ import {
 import { api, connection } from "./lib/api";
 import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
+import { sortTorrents, type TorrentSort } from "./lib/sort";
 
 const fmtSpeed = (n: number) => (n ? `${(n / 1e6).toFixed(1)} MB/s` : "—");
 const fmtSize = (n: number) => (n < 0 ? "—" : `${(n / 1e9).toFixed(1)} GB`);
@@ -44,6 +46,10 @@ export function App() {
     [reviewing, setReviewing] = useState<Torrent | null>(null),
     [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all"),
+    [sort, setSort] = useState<TorrentSort>(() => {
+      const saved = localStorage.getItem("harbor.torrent-sort");
+      return (saved as TorrentSort) || "added-desc";
+    }),
     [view, setView] = useState<"downloads" | "settings">("downloads"),
     [error, setError] = useState("");
   async function refresh() {
@@ -70,17 +76,20 @@ export function App() {
   }, [paired]);
   const visible = useMemo(
     () =>
-      items.filter(
-        (t) =>
-          (filter === "all" ||
-            (filter === "active" &&
-              ["queued", "downloading"].includes(t.status)) ||
-            (filter === "review" && t.status === "review") ||
-            (filter === "complete" &&
-              ["organized", "completed", "removed"].includes(t.status))) &&
-          t.name.toLowerCase().includes(query.toLowerCase()),
+      sortTorrents(
+        items.filter(
+          (t) =>
+            (filter === "all" ||
+              (filter === "active" &&
+                ["queued", "downloading"].includes(t.status)) ||
+              (filter === "review" && t.status === "review") ||
+              (filter === "complete" &&
+                ["organized", "completed", "removed"].includes(t.status))) &&
+            t.name.toLowerCase().includes(query.toLowerCase()),
+        ),
+        sort,
       ),
-    [items, filter, query],
+    [items, filter, query, sort],
   );
   if (!paired)
     return (
@@ -195,6 +204,24 @@ export function App() {
                 ))}
               </div>
               <div className="tools">
+                <label className="sort-control" title="Sort torrents">
+                  <ArrowUpDown />
+                  <select
+                    value={sort}
+                    onChange={(event) => {
+                      const next = event.target.value as TorrentSort;
+                      setSort(next);
+                      localStorage.setItem("harbor.torrent-sort", next);
+                    }}
+                  >
+                    <option value="added-desc">Newest added</option>
+                    <option value="added-asc">Oldest added</option>
+                    <option value="name-asc">Name A–Z</option>
+                    <option value="name-desc">Name Z–A</option>
+                    <option value="progress-desc">Progress</option>
+                    <option value="status-asc">Status</option>
+                  </select>
+                </label>
                 <label className="search">
                   <Search />
                   <input

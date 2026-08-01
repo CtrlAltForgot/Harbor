@@ -19,7 +19,7 @@ export class Store {
   }
   issueToken(label: string) { const token = `hbr_${randomBytes(24).toString("base64url")}`; this.db.prepare("INSERT INTO tokens VALUES (?, ?, ?, ?, NULL)").run(randomBytes(8).toString("hex"), hash(token), label, new Date().toISOString()); return token; }
   validToken(token: string) { return !!this.db.prepare("SELECT 1 FROM tokens WHERE token_hash=? AND revoked_at IS NULL").get(hash(token)); }
-  list(): Torrent[] { return this.db.prepare("SELECT payload FROM torrents ORDER BY updated_at DESC").all().map((r: any) => JSON.parse(r.payload)); }
+  list(): Torrent[] { return this.db.prepare("SELECT payload FROM torrents ORDER BY json_extract(payload, '$.createdAt') DESC, id ASC").all().map((r: any) => JSON.parse(r.payload)); }
   get(id: string): Torrent | undefined { const row = this.db.prepare("SELECT payload FROM torrents WHERE id=?").get(id) as any; return row ? JSON.parse(row.payload) : undefined; }
   byHash(hashValue: string) { const row = this.db.prepare("SELECT payload FROM torrents WHERE info_hash=?").get(hashValue) as any; return row ? JSON.parse(row.payload) as Torrent : undefined; }
   setting(key: string) { return (this.db.prepare("SELECT value FROM settings WHERE key=?").get(key) as {value:string}|undefined)?.value; }

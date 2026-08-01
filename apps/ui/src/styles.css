@@ -239,6 +239,35 @@ select {
   display: flex;
   gap: 8px;
 }
+.sort-control {
+  height: 37px;
+  min-width: 150px;
+  border: 1px solid #26343a;
+  background: #10171a;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  color: #687b82;
+}
+.sort-control svg {
+  width: 15px;
+  flex: 0 0 auto;
+}
+.sort-control select {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: #10171a;
+  color: #b8c6ca;
+  padding-left: 7px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.sort-control option {
+  background: #10171a;
+  color: #e2e9eb;
+}
 .search {
   height: 37px;
   width: 210px;
