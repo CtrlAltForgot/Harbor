@@ -11,7 +11,7 @@ export interface Torrent {
   seeds: number; peers: number; size: number; downloaded: number; category: Category; classification: Classification;
   destination: string; retention: RetentionPolicy; createdAt: string; completedAt?: string; error?: string; files: TorrentFile[];
 }
-export interface ServerStatus { name: string; version: string; paired: boolean; engine: "mock" | "qbittorrent"; uptime: number; downloadSpeed: number; uploadSpeed: number }
+export interface ServerStatus { name: string; version: string; paired: boolean; engine: "mock" | "qbittorrent"; engineConnected?: boolean; engineError?: string; storageReady?: boolean; storageIssues?: string[]; uptime: number; downloadSpeed: number; uploadSpeed: number }
 export interface AddTorrentRequest { magnet?: string; torrentBase64?: string; fileName?: string; category?: Category; retention?: RetentionPolicy; mode?: "server" | "local" }
 export interface PairResponse { token: string; serverName: string }
 export interface EventMessage { type: "snapshot" | "torrent.updated" | "torrent.removed"; torrents?: Torrent[]; torrent?: Torrent; torrentId?: string }

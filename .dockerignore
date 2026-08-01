@@ -1,0 +1,9 @@
+.git
+node_modules
+**/node_modules
+**/dist
+**/target
+dev-storage
+data
+.env
+*.db*

@@ -1,18 +1,51 @@
 services:
   harbor:
     build: .
+    user: "${PUID:-1000}:${PGID:-1000}"
     environment:
       HARBOR_PAIRING_CODE: ${HARBOR_PAIRING_CODE:?Set HARBOR_PAIRING_CODE in .env}
-      HARBOR_ENGINE: mock
+      HARBOR_ENGINE: qbittorrent
+      QBITTORRENT_URL: http://qbittorrent:8080
+      QBITTORRENT_USERNAME: ${QBITTORRENT_USERNAME:-admin}
+      QBITTORRENT_PASSWORD: ${QBITTORRENT_PASSWORD:?Set the qBittorrent Web UI password in .env}
+      HARBOR_INCOMPLETE_DIR: /downloads/incomplete
     ports:
       - "7331:7331"
     volumes:
       - harbor-config:/config
-      - ./dev-storage/incomplete:/downloads/incomplete
-      - ./dev-storage/complete:/downloads/complete
-      - ./dev-storage/media:/media
+      - ${INCOMPLETE_PATH:-./dev-storage/incomplete}:/downloads/incomplete
+      - ${COMPLETE_PATH:-./dev-storage/complete}:/downloads/complete
+      - ${MOVIES_PATH:-./dev-storage/media/movies}:/media/movies
+      - ${TV_PATH:-./dev-storage/media/tv}:/media/tv
+      - ${GAMES_PATH:-./dev-storage/media/games}:/media/games
+      - ${MUSIC_PATH:-./dev-storage/media/music}:/media/music
+      - ${SOFTWARE_PATH:-./dev-storage/media/software}:/media/software
+      - ${BOOKS_PATH:-./dev-storage/media/books}:/media/books
+      - ${GENERAL_PATH:-./dev-storage/media/general}:/media/general
+      - ${REVIEW_PATH:-./dev-storage/media/review}:/media/review
     restart: unless-stopped
+    depends_on:
+      qbittorrent:
+        condition: service_started
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-America/Chicago}
+      WEBUI_PORT: 8080
+      TORRENTING_PORT: ${TORRENTING_PORT:-6881}
+    ports:
+      - "${QBITTORRENT_WEBUI_PORT:-8080}:8080"
+      - "${TORRENTING_PORT:-6881}:${TORRENTING_PORT:-6881}"
+      - "${TORRENTING_PORT:-6881}:${TORRENTING_PORT:-6881}/udp"
+    volumes:
+      - qbittorrent-config:/config
+      - ${DOWNLOADS_ROOT:-./dev-storage}:/downloads
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
 volumes:
   harbor-config:
+  qbittorrent-config:

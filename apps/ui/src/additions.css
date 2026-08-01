@@ -1,0 +1,11 @@
+.file-choice { display:flex; align-items:center; gap:10px; margin:13px 0; color:#64777f; font-size:10px; }
+.file-choice::before, .file-choice::after { content:""; height:1px; background:#24333a; flex:1; }
+.file-choice label { margin:0 !important; color:#76cbbb !important; cursor:pointer; white-space:nowrap; }
+.file-choice input { display:none; }
+.review-link { border:0; border-radius:7px; padding:5px 8px; background:#3b2d20; color:#e6b16d; cursor:pointer; }
+.file-details { padding:12px 20px 18px 72px; background:#0d1417; border-bottom:1px solid #1d292f; }
+.file-details header, .file-details > div { display:grid; grid-template-columns:1fr 90px 110px; gap:12px; align-items:center; min-height:34px; font-size:11px; }
+.file-details header { color:#73868e; }
+.file-details > div span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#b5c2c7; }
+.file-details select, .review-sheet input { background:#111b1f; border:1px solid #2a3a40; border-radius:8px; color:#dfe7e9; padding:7px; }
+.review-sheet .field-grid { align-items:end; }

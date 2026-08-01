@@ -12,6 +12,10 @@ Base URL: `http://SERVER:7331`. All `/api/v1/*` routes except pairing require `A
 | POST | `/api/v1/torrents/:id/pause` | Pause |
 | POST | `/api/v1/torrents/:id/resume` | Resume |
 | POST | `/api/v1/torrents/:id/retry` | Retry |
+| POST | `/api/v1/torrents/:id/recheck` | Ask qBittorrent to recheck data |
+| POST | `/api/v1/torrents/:id/files/priority` | Set `{ids,priority}` |
+| POST | `/api/v1/torrents/:id/limits` | Set byte/sec `{download,upload}` limits |
+| PATCH | `/api/v1/torrents/:id/classification` | Confirm or correct category/title/episode data |
 | DELETE | `/api/v1/torrents/:id` | Remove queue record; never deletes data in this version |
 | WS | `/api/v1/events` | Snapshot and update messages |
 

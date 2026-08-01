@@ -1,24 +1,46 @@
 # Harbor
 
-Harbor is a desktop torrent controller and Unraid companion. The desktop sends work to your server; the server owns downloading, classification, organization, and retention. This repository currently contains the first end-to-end vertical slice using a deterministic download simulator, so it is safe to evaluate without downloading torrent data.
+Harbor is a personal homelab torrent controller for Nobara and Unraid. The desktop sends magnets or `.torrent` files to the Harbor companion; Harbor controls qBittorrent on the server, monitors transfers, classifies completed content, and copies it into configured media folders only after verifying the result.
 
-## Run the first vertical slice
+The repository is ready for its first real homelab test. Automated and isolated-container tests pass; a real media download has intentionally not been performed without the owner's choice of lawful test content and actual Unraid paths.
+
+## What works
+
+- Pairing-code authentication with persistent hashed client tokens
+- Real qBittorrent 5.x Web API authentication, magnet/`.torrent` intake, monitoring, pause/resume/recheck/remove, file priorities, and per-torrent limits
+- Exact info-hash duplicate detection, including base32 magnets
+- SQLite queue/audit persistence and restart recovery
+- Local movie, episode, season-pack, and extension-based classification
+- Configurable category volumes with startup readiness reporting
+- Verified, collision-safe organization that preserves the source
+- Needs Review correction and retention actions after verified organization
+- Companion-hosted web UI and a native Nobara RPM
+
+## Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`, pair with `http://localhost:7331` and code `harbor-local`, then add a magnet. The default code is development-only. The production container requires you to provide a new value.
+Development uses the safe mock engine unless `HARBOR_ENGINE=qbittorrent` is set. Pair with `http://localhost:7331`; the development-only code is `harbor-local`. Run every quality gate with `npm run check`.
 
-Run all quality checks with `npm run check`. See [the development guide](docs/DEVELOPMENT.md), [architecture](docs/ARCHITECTURE.md), and [project plan](PROJECT_PLAN.md).
+## First real homelab test
+
+Follow [the Unraid guide](docs/UNRAID.md), then install the generated Nobara package:
+
+```bash
+sudo dnf install ./apps/desktop/src-tauri/target/release/bundle/rpm/Harbor-0.1.0-1.x86_64.rpm
+```
+
+Use a small lawful/public-domain torrent and choose a temporary test library mapping—not your only media copy—for the first organization run.
 
 ## Repository
 
-- `apps/companion`: authenticated Fastify API, SQLite state, engine boundary, classification
-- `apps/ui`: React interface shared by desktop and companion web surfaces
-- `apps/desktop`: Tauri desktop wrapper
-- `packages/contracts`: shared API/domain types
-- `docker/unraid`: future Community Applications template
+- `apps/companion`: Fastify API, SQLite state, qBittorrent adapter, classification and organizer
+- `apps/ui`: shared desktop and companion web interface
+- `apps/desktop`: Tauri/Nobara package
+- `packages/contracts`: shared domain/API types
+- `docker/unraid`: draft Unraid template for a future published image
 
-Harbor is LAN-only by default. Do not port-forward it. Production use with real downloads begins after the qBittorrent adapter and organization safety gates in Milestones 2 and 3.
+Harbor is designed for trusted LAN access. Do not port-forward ports 7331 or 8080.

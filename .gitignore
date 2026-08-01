@@ -6,7 +6,7 @@ dist/
 *.db-wal
 .env
 target/
-src-tauri/gen/
+**/src-tauri/gen/
 coverage/
 *.tsbuildinfo
 .DS_Store
