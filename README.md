@@ -2,6 +2,8 @@
 
 Harbor is a personal homelab torrent controller for Nobara and Unraid. The desktop sends magnets or `.torrent` files to the Harbor companion; Harbor controls qBittorrent on the server, monitors transfers, classifies completed content, and copies it into configured media folders only after verifying the result.
 
+Harbor mounts your existing Unraid media share once and lets you select its Movies, TV Shows, and Needs Review folders from **Settings**. Optional TMDB matching confirms canonical titles and years. Every organized item reports its exact final path.
+
 The repository is ready for homelab use. In addition to automated tests, Harbor completed a genuine 129 MB Creative Commons torrent through qBittorrent, verified and organized all files, applied retention, and recovered history after restart. See [the validation record](docs/VALIDATION.md).
 
 ## What works
@@ -10,8 +12,8 @@ The repository is ready for homelab use. In addition to automated tests, Harbor 
 - Real qBittorrent 5.x Web API authentication, magnet/`.torrent` intake, monitoring, pause/resume/recheck/remove, file priorities, and per-torrent limits
 - Exact info-hash duplicate detection, including base32 magnets
 - SQLite queue/audit persistence and restart recovery
-- Local movie, episode, season-pack, and extension-based classification
-- Configurable category volumes with startup readiness reporting
+- Local movie, episode, season-pack, and extension-based classification with optional TMDB confirmation
+- In-app media folder selection with server-side path and permission validation
 - Verified, collision-safe organization that preserves the source
 - Needs Review correction and retention actions after verified organization
 - Companion-hosted web UI and a native Nobara RPM

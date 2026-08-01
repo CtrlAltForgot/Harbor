@@ -43,11 +43,16 @@ pairing_code="${HARBOR_PAIRING_CODE:-${previous_pairing_code:-$(openssl rand -he
 qbit_password="${QBITTORRENT_PASSWORD:-${previous_qbit_password:-$(openssl rand -base64 24 | tr -d '/+=' | head -c 24)}}"
 timezone="${TZ:-America/Chicago}"
 
+movies_name="Movies"; tv_name="TV Shows"; review_name="Needs Review"
+[[ -d "$media_root/movies" && ! -d "$media_root/Movies" ]] && movies_name="movies"
+[[ -d "$media_root/tv" && ! -d "$media_root/TV Shows" ]] && tv_name="tv"
+[[ -d "$media_root/review" && ! -d "$media_root/Needs Review" ]] && review_name="review"
+
 paths=(
   "$appdata_root/harbor" "$appdata_root/qbittorrent"
   "$downloads_root/incomplete" "$downloads_root/complete"
-  "$media_root/movies" "$media_root/tv" "$media_root/games" "$media_root/music"
-  "$media_root/software" "$media_root/books" "$media_root/general" "$media_root/review"
+  "$media_root/$movies_name" "$media_root/$tv_name" "$media_root/Games" "$media_root/Music"
+  "$media_root/Software" "$media_root/Books" "$media_root/General" "$media_root/$review_name"
 )
 say "Creating persistent folders"
 for storage_path in "${paths[@]}"; do
@@ -73,14 +78,10 @@ QBITTORRENT_CONFIG_PATH=$appdata_root/qbittorrent
 DOWNLOADS_ROOT=$downloads_root
 INCOMPLETE_PATH=$downloads_root/incomplete
 COMPLETE_PATH=$downloads_root/complete
-MOVIES_PATH=$media_root/movies
-TV_PATH=$media_root/tv
-GAMES_PATH=$media_root/games
-MUSIC_PATH=$media_root/music
-SOFTWARE_PATH=$media_root/software
-BOOKS_PATH=$media_root/books
-GENERAL_PATH=$media_root/general
-REVIEW_PATH=$media_root/review
+MEDIA_ROOT_PATH=$media_root
+HARBOR_MOVIES_DIR=/media/$movies_name
+HARBOR_TV_DIR=/media/$tv_name
+HARBOR_REVIEW_DIR=/media/$review_name
 EOF
 
 say "Starting the dedicated qBittorrent container"

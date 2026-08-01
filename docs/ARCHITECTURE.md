@@ -23,3 +23,5 @@ Harbor Companion API ── SQLite (queue, config, tokens, audit)
 Pairing exchanges a short-lived/out-of-band code for a random 192-bit bearer token. Only a SHA-256 digest is stored server-side. Tokens and torrent file bodies are redacted from structured logs. TLS termination can be supplied by a trusted LAN reverse proxy; the API binds to LAN interfaces and is not intended for public exposure.
 
 The organizer copies to a uniquely named partial target, verifies the recursive byte count, and atomically renames it. The staging source is preserved. Low-confidence classification routes to review, and retention runs only after organization succeeds. Operation history is stored in the SQLite audit table.
+
+Movie/TV identification is layered: deterministic release-name and file rules establish content shape, then optional TMDB search confirms the canonical title and year. Only an unambiguous result is promoted to automatic organization. Tied, weak, or unavailable metadata results enter Needs Review, and local classification remains available offline.

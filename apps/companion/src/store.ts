@@ -22,6 +22,8 @@ export class Store {
   list(): Torrent[] { return this.db.prepare("SELECT payload FROM torrents ORDER BY updated_at DESC").all().map((r: any) => JSON.parse(r.payload)); }
   get(id: string): Torrent | undefined { const row = this.db.prepare("SELECT payload FROM torrents WHERE id=?").get(id) as any; return row ? JSON.parse(row.payload) : undefined; }
   byHash(hashValue: string) { const row = this.db.prepare("SELECT payload FROM torrents WHERE info_hash=?").get(hashValue) as any; return row ? JSON.parse(row.payload) as Torrent : undefined; }
+  setting(key: string) { return (this.db.prepare("SELECT value FROM settings WHERE key=?").get(key) as {value:string}|undefined)?.value; }
+  setSetting(key: string, value: string) { this.db.prepare("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(key,value); }
   save(torrent: Torrent) { this.db.prepare("INSERT INTO torrents VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload, updated_at=excluded.updated_at").run(torrent.id, torrent.infoHash, JSON.stringify(torrent), new Date().toISOString()); }
   remove(id: string) { this.db.prepare("DELETE FROM torrents WHERE id=?").run(id); this.audit("torrent.removed", id, {}); }
   audit(action: string, torrentId: string | null, detail: unknown) { this.db.prepare("INSERT INTO audit(action,torrent_id,detail,created_at) VALUES(?,?,?,?)").run(action, torrentId, JSON.stringify(detail), new Date().toISOString()); }

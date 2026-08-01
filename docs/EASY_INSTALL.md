@@ -6,7 +6,7 @@ This installs a dedicated qBittorrent on Unraid. It does not touch qBittorrent o
 
 The Unraid installer asks for three folders and two optional ports, then automatically:
 
-- creates persistent appdata, download, and category folders;
+- creates persistent appdata/download folders and mounts your existing media share once;
 - generates a Harbor pairing code and qBittorrent password;
 - starts the LinuxServer qBittorrent container;
 - captures qBittorrent's temporary first-boot password without displaying it;
@@ -45,6 +45,12 @@ The installer prints:
 - the path of the saved installation record.
 
 It normally takes a few minutes on the first run while Docker downloads and builds images.
+
+## Step 2a: select your existing library folders
+
+After pairing, open **Settings** in Harbor. Select `/media/Movies`, `/media/TV Shows`, and `/media/Needs Review`, then choose **Save and verify**. These are container views of the Unraid media root selected during installation; Harbor verifies they are writable.
+
+For substantially better title identification, paste a TMDB API Read Access Token in the same screen. TMDB is optional and local filename classification still works without it. Ambiguous matches are held for review rather than guessed.
 
 ## Step 3: install Harbor Desktop on Nobara
 

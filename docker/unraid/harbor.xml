@@ -7,6 +7,6 @@
   <Config Name="API Port" Target="7331" Default="7331" Mode="tcp" Description="LAN API port" Type="Port" Display="always" Required="true" Mask="false">7331</Config>
   <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/harbor" Mode="rw" Description="Persistent state" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/harbor</Config>
   <Config Name="Incomplete" Target="/downloads/incomplete" Default="/mnt/user/downloads/incomplete" Mode="rw" Description="Incomplete staging" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/downloads/incomplete</Config>
-  <Config Name="Media" Target="/media" Default="/mnt/user" Mode="rw" Description="Configure narrower category mappings before production" Type="Path" Display="always" Required="true" Mask="false">/mnt/user</Config>
+  <Config Name="Media root" Target="/media" Default="/mnt/user/media" Mode="rw" Description="Existing media share; select Movies and TV Shows inside Harbor Settings" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media</Config>
   <Config Name="Pairing code" Target="HARBOR_PAIRING_CODE" Default="" Mode="" Description="Required initial pairing secret" Type="Variable" Display="always" Required="true" Mask="true"></Config>
 </Container>

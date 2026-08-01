@@ -10,20 +10,17 @@ services:
       QBITTORRENT_USERNAME: ${QBITTORRENT_USERNAME:-admin}
       QBITTORRENT_PASSWORD: ${QBITTORRENT_PASSWORD:?Set the qBittorrent Web UI password in .env}
       HARBOR_INCOMPLETE_DIR: /downloads/incomplete
+      HARBOR_MEDIA_ROOT: /media
+      HARBOR_MOVIES_DIR: ${HARBOR_MOVIES_DIR:-/media/Movies}
+      HARBOR_TV_DIR: ${HARBOR_TV_DIR:-/media/TV Shows}
+      HARBOR_REVIEW_DIR: ${HARBOR_REVIEW_DIR:-/media/Needs Review}
     ports:
       - "${HARBOR_HOST_PORT:-7331}:7331"
     volumes:
       - ${HARBOR_CONFIG_PATH:-harbor-config}:/config
       - ${INCOMPLETE_PATH:-./dev-storage/incomplete}:/downloads/incomplete
       - ${COMPLETE_PATH:-./dev-storage/complete}:/downloads/complete
-      - ${MOVIES_PATH:-./dev-storage/media/movies}:/media/movies
-      - ${TV_PATH:-./dev-storage/media/tv}:/media/tv
-      - ${GAMES_PATH:-./dev-storage/media/games}:/media/games
-      - ${MUSIC_PATH:-./dev-storage/media/music}:/media/music
-      - ${SOFTWARE_PATH:-./dev-storage/media/software}:/media/software
-      - ${BOOKS_PATH:-./dev-storage/media/books}:/media/books
-      - ${GENERAL_PATH:-./dev-storage/media/general}:/media/general
-      - ${REVIEW_PATH:-./dev-storage/media/review}:/media/review
+      - ${MEDIA_ROOT_PATH:-./dev-storage/media}:/media
     restart: unless-stopped
     depends_on:
       qbittorrent:
