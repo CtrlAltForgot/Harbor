@@ -32,6 +32,10 @@ The expected response is `{"ok":true,"service":"Harbor Companion"}`. If that wor
 
 Open Settings and check the displayed `Unraid host path → /media` mapping. If the host path is not the parent of the Movies and TV Shows folders you browse over SMB, rerun the Unraid installer and enter the correct media root. Then use **Re-organize & clean staging** on the completed row. Harbor copies from the still-present download into the corrected library, verifies it, and only then removes the qBittorrent job and staging folder.
 
+## “A valid Harbor pairing token is required”
+
+The Unraid pairing code changed after this desktop was paired. Select **Attention needed** or the gear button, open **Connection & pairing**, enter the current server address and pairing code, then select **Pair and reconnect**. The connection panel deliberately remains usable while authenticated settings are unavailable. If needed, **Forget server** clears only the desktop credential and returns to first-run pairing; it does not alter torrents or server data.
+
 - Pairing fails: confirm the server URL, port 7331, and exact `HARBOR_PAIRING_CODE`. Check the companion log without sharing credentials.
 - UI shows disconnected: open `/health` on the server from the desktop. Harbor retries automatically.
 - State disappeared: ensure `/config` is mapped persistently and writable by the configured UID/GID.

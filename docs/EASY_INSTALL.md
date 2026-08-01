@@ -90,7 +90,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-039287df70eeef596239b8373ff1c7ff4da99fd2993a4cf8149883ea2cb4f61f
+4507c094f6ad3d373805f627fd7a02b7be17af22c47e75a16b1b6e905e1a54bc
 ```
 
 ## Step 4: pair
@@ -99,6 +99,8 @@ If you already cloned Harbor elsewhere, use that directory instead. The script i
 2. Enter `http://YOUR-UNRAID-IP:7331` unless you chose another port.
 3. Enter the pairing code printed by the Unraid installer.
 4. Harbor should show **qBittorrent engine · Online** with no storage warning.
+
+If the pairing code or Unraid address changes later, open the gear button, use **Connection & pairing**, enter the current code, and select **Pair and reconnect**. This panel remains available even when the old credential has already been rejected. **Forget server** returns Harbor to the first-run pairing screen.
 
 You can also use the same interface at `http://YOUR-UNRAID-IP:7331` in a browser.
 

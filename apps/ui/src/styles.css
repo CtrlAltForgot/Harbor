@@ -480,6 +480,18 @@ select {
   align-items: center;
   margin-bottom: 12px;
 }
+.offline-banner span {
+  flex: 1;
+}
+.offline-banner button {
+  border: 0;
+  background: transparent;
+  color: #ffd0c4;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
 .pair-page {
   min-height: 100vh;
   display: grid;
@@ -836,8 +848,35 @@ select {
   font-size: 12px;
 }
 .settings-loading {
-  margin-top: 40px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   color: var(--muted);
+}
+.connection-settings {
+  border-color: #31534c;
+}
+.connection-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f0aa99;
+  font-size: 11px;
+}
+.connection-warning svg {
+  width: 16px;
+  flex: 0 0 auto;
+}
+.connection-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.connection-actions button {
+  min-height: 40px;
+}
+.danger-button {
+  color: #e99a8a;
 }
 .organized-location {
   display: flex !important;

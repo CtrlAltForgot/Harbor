@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Download,
   FolderCheck,
+  KeyRound,
+  LogOut,
   MoreHorizontal,
   Pause,
   Play,
@@ -116,7 +118,7 @@ export function App() {
               <Download /> Downloads
             </button>
           )}
-          <button className="connection">
+          <button className="connection" onClick={() => setView("settings")}>
             <Wifi /> {error ? "Attention needed" : "Unraid connected"}
           </button>
           <button
@@ -137,7 +139,7 @@ export function App() {
       </header>
       <main className="content">
         {view === "settings" ? (
-          <SettingsPage />
+          <SettingsPage connectionError={error} />
         ) : (
           <>
             <header className="topbar">
@@ -205,7 +207,11 @@ export function App() {
             </section>
             {error && (
               <div className="offline-banner">
-                <AlertTriangle /> {error}. Harbor will reconnect automatically.
+                <AlertTriangle />
+                <span>{error}. Harbor will reconnect automatically.</span>
+                <button onClick={() => setView("settings")}>
+                  Update connection
+                </button>
               </div>
             )}
             <section className="torrent-list">
@@ -443,7 +449,7 @@ function TorrentRow({
   );
 }
 
-function SettingsPage() {
+function SettingsPage({ connectionError }: { connectionError: string }) {
   const [settings, setSettings] = useState<HarborSettings | null>(null),
     [folders, setFolders] = useState<string[]>([]),
     [token, setToken] = useState(""),
@@ -461,20 +467,6 @@ function SettingsPage() {
         ),
       );
   }, []);
-  if (!settings)
-    return (
-      <>
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">HARBOR COMPANION</p>
-            <h1>Settings</h1>
-          </div>
-        </header>
-        <div className="settings-loading">
-          {error || "Loading server folders…"}
-        </div>
-      </>
-    );
   async function save() {
     setError("");
     setNotice("");
@@ -501,11 +493,21 @@ function SettingsPage() {
           <p className="eyebrow">HARBOR COMPANION</p>
           <h1>Settings</h1>
         </div>
-        <button className="primary" onClick={save}>
-          <CheckCircle2 /> Save and verify
-        </button>
+        {settings && (
+          <button className="primary" onClick={save}>
+            <CheckCircle2 /> Save and verify
+          </button>
+        )}
       </header>
       <div className="settings-page">
+        <ConnectionSettings connectionError={connectionError} />
+        {!settings && (
+          <div className="settings-loading">
+            {error || "Loading server folders…"}
+          </div>
+        )}
+        {settings && (
+          <>
         <section className="settings-section">
           <div>
             <h2>Media destinations</h2>
@@ -597,6 +599,8 @@ function SettingsPage() {
             </div>
           </div>
         </section>
+          </>
+        )}
         {notice && (
           <div className="settings-success">
             <CheckCircle2 />
@@ -611,6 +615,75 @@ function SettingsPage() {
         )}
       </div>
     </>
+  );
+}
+
+function ConnectionSettings({ connectionError }: { connectionError: string }) {
+  const saved = connection.get();
+  const [url, setUrl] = useState(saved?.baseUrl ?? "http://localhost:7331"),
+    [code, setCode] = useState(""),
+    [busy, setBusy] = useState(false),
+    [message, setMessage] = useState("");
+  async function reconnect() {
+    setBusy(true);
+    setMessage("");
+    try {
+      if (!code.trim()) throw new Error("Enter the current pairing code from Unraid");
+      await api.pair(url, code.trim());
+      window.location.reload();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not pair with Harbor");
+      setBusy(false);
+    }
+  }
+  function forget() {
+    connection.clear();
+    window.location.reload();
+  }
+  return (
+    <section className="settings-section connection-settings">
+      <div>
+        <h2>Connection & pairing</h2>
+        <p>
+          Replace the saved connection whenever the Unraid address or pairing
+          code changes. Harbor never displays the saved access token.
+        </p>
+      </div>
+      <div className="settings-form">
+        <label>
+          Server address
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="http://tower.local:7331"
+          />
+        </label>
+        <label>
+          Current pairing code
+          <input
+            type="password"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && reconnect()}
+            placeholder="Paste the current code from Unraid"
+          />
+          <small>This replaces the rejected credential stored on this PC.</small>
+        </label>
+        {(message || connectionError) && (
+          <div className="connection-warning">
+            <AlertTriangle /> {message || connectionError}
+          </div>
+        )}
+        <div className="connection-actions">
+          <button className="primary" onClick={reconnect} disabled={busy}>
+            <KeyRound /> {busy ? "Pairing…" : "Pair and reconnect"}
+          </button>
+          <button className="quiet danger-button" onClick={forget}>
+            <LogOut /> Forget server
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 function PathField({
