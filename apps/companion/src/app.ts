@@ -302,6 +302,63 @@ export async function buildApp(overrides: Partial<Config> = {}) {
     const { id, action } = request.params as { id: string; action: string };
     const current = store.get(id);
     if (!current) return reply.code(404).send({ error: "Torrent not found" });
+    if (action === "reorganize") {
+      if (!qbit)
+        return reply
+          .code(400)
+          .send({ error: "Re-organization requires qBittorrent" });
+      try {
+        const remote = (await qbit.list()).find(
+          (item) => item.hash.toLowerCase() === current.infoHash.toLowerCase(),
+        );
+        if (!remote)
+          throw new Error(
+            "The original qBittorrent job is no longer available",
+          );
+        const source =
+          remote.content_path || path.join(remote.save_path, remote.name);
+        const relative = path.relative(
+          path.resolve(config.incompleteDir),
+          path.resolve(source),
+        );
+        if (!relative || relative.startsWith("..") || path.isAbsolute(relative))
+          throw new Error("The original content is outside incomplete storage");
+        const destination =
+          config.destinations[current.classification.category] ??
+          config.destinations.review!;
+        const result = await organize(
+          source,
+          destination,
+          current.classification,
+        );
+        await qbit.remove(current.infoHash, false);
+        await cleanupStaging(source, config.incompleteDir);
+        const next: Torrent = {
+          ...current,
+          destination,
+          organizedPath: result.destination,
+          organizedHostPath: hostMediaPath(config, result.destination),
+          retention: "remove",
+          status: "organized",
+          error: undefined,
+        };
+        store.save(next);
+        store.audit("organization.rerun_completed", id, result);
+        store.audit("staging.cleaned", id, {
+          source,
+          afterReorganization: true,
+        });
+        broadcast({ type: "torrent.updated", torrent: next });
+        return next;
+      } catch (error) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error ? error.message : "Re-organization failed",
+          });
+      }
+    }
     if (
       !(["pause", "resume", "retry", "recheck"] as const).includes(
         action as any,
@@ -402,12 +459,10 @@ export async function buildApp(overrides: Partial<Config> = {}) {
           });
         }
       } catch (error) {
-        return reply
-          .code(400)
-          .send({
-            error:
-              error instanceof Error ? error.message : "Staging cleanup failed",
-          });
+        return reply.code(400).send({
+          error:
+            error instanceof Error ? error.message : "Staging cleanup failed",
+        });
       }
     }
     const next = { ...current, retention: parsed.data.retention };

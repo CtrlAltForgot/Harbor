@@ -342,6 +342,23 @@ function TorrentRow({
           </button>
           {actionOpen && (
             <div className="action-menu">
+              {t.status === "organized" && (
+                <button
+                  onClick={async () => {
+                    if (
+                      confirm(
+                        "Copy this torrent into the currently configured library again, verify it, then remove its staging data?",
+                      )
+                    ) {
+                      await api.action(t.id, "reorganize");
+                      setActionOpen(false);
+                      refresh();
+                    }
+                  }}
+                >
+                  Re-organize &amp; clean staging
+                </button>
+              )}
               <button
                 onClick={async () => {
                   await api.retention(t.id, "remove");
