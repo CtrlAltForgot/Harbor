@@ -25,15 +25,19 @@ npm run dev
 
 Development uses the safe mock engine unless `HARBOR_ENGINE=qbittorrent` is set. Pair with `http://localhost:7331`; the development-only code is `harbor-local`. Run every quality gate with `npm run check`.
 
-## First real homelab test
+## Easy installation
 
-Follow [the Unraid guide](docs/UNRAID.md), then install the generated Nobara package:
+The guided installer creates and configures a dedicated qBittorrent container on Unraid; it does not touch qBittorrent on your PC.
 
 ```bash
-sudo dnf install ./apps/desktop/src-tauri/target/release/bundle/rpm/Harbor-0.1.0-1.x86_64.rpm
+# On Unraid, from the repository directory
+./scripts/install-unraid.sh
+
+# On Nobara, from the repository directory
+./scripts/install-desktop.sh
 ```
 
-Configure your actual Unraid mappings carefully. Harbor runs storage preflight and preserves staging data, but only your server can prove its share ownership and mover/cache behavior.
+See the complete [easy installation guide](docs/EASY_INSTALL.md). Advanced path and mover details are in [the Unraid guide](docs/UNRAID.md).
 
 ## Repository
 

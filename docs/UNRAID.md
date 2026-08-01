@@ -1,5 +1,7 @@
 # Unraid first-test installation
 
+For the normal guided setup, use [Easy installation](EASY_INSTALL.md). The details below explain the generated configuration and are mainly useful for custom installations or troubleshooting.
+
 Harbor can control your existing qBittorrent container, which is the simplest setup. The bundled Compose service is useful for local development, but qBittorrent's LinuxServer image generates a temporary password on first boot; set a permanent Web UI password before connecting Harbor.
 
 ## 1. Prepare qBittorrent
