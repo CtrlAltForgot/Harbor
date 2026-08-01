@@ -81,6 +81,10 @@ The add sheet accepts either one magnet or multiple magnet links copied together
 
 Harbor's queue, organized entries, archived removals, settings, and audit records are stored in SQLite under the persistent Unraid `/config` mapping. Closing the desktop or restarting the Harbor container does not clear this history. **Remove torrent & archive history** removes the qBittorrent job without deleting its Harbor history entry or downloaded data.
 
+Removing a torrent opens a confirmation screen with **Also delete original downloaded files** disabled by default. When enabled, Harbor permits deletion only for the torrent path inside its configured incomplete-download directory. A verified organized Movies/TV library copy is outside that boundary and is never deleted by this action.
+
+For television, separate downloads are consolidated as `TV Shows/Show Name/Season NN/Show Name - SnnEnn.ext`. Existing show and season folders are reused, new episodes are merged only after collision checks, and Harbor never overwrites an existing episode. Season-pack names such as `The First 48 - Season 3`, `Season 5`, and `Season 6` normalize to the same `The First 48` show directory.
+
 ## Step 3: install Harbor Desktop on Nobara
 
 Open a terminal on the Nobara PC. Download Harbor and run the desktop installer:
@@ -94,7 +98,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-19410311e0f7b2a2e5e1586e9d9fa11ba124f8be72b926b99326e00201bdda42
+9a7772c9744b03a6ca66fafbdaded58f0dfe16e2efef5cb343127211e4c82f12
 ```
 
 ## Step 4: pair

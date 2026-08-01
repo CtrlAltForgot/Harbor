@@ -178,6 +178,38 @@ describe("safe organizer", () => {
       ),
     ).toBe("new");
   });
+  it("keeps separately downloaded seasons under one show folder", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "harbor-org-"));
+    roots.push(root);
+    const destination = path.join(root, "tv");
+    for (const season of [3, 5, 6]) {
+      const source = path.join(root, `first-48-season-${season}`);
+      await mkdir(source);
+      writeFileSync(
+        path.join(source, `The.First.48.S${String(season).padStart(2, "0")}E01.mkv`),
+        `season-${season}`,
+      );
+      await organize(source, destination, {
+        category: "tv",
+        confidence: 0.98,
+        reasons: [],
+        title: "The First 48",
+        season,
+      });
+    }
+    for (const season of [3, 5, 6])
+      expect(
+        readFileSync(
+          path.join(
+            destination,
+            "The First 48",
+            `Season ${String(season).padStart(2, "0")}`,
+            `The First 48 - S${String(season).padStart(2, "0")}E01.mkv`,
+          ),
+          "utf8",
+        ),
+      ).toBe(`season-${season}`);
+  });
   it("cleans only a child path inside incomplete storage", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "harbor-org-"));
     roots.push(root);

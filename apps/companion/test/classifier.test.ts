@@ -18,6 +18,14 @@ describe("local classifier", () => {
       category: "tv",
       season: 3,
     }));
+  it("normalizes copied season-pack names into one canonical show title", () => {
+    for (const season of [3, 5, 6])
+      expect(classify(`The First 48 - Season ${season}`)).toMatchObject({
+        category: "tv",
+        title: "The First 48",
+        season,
+      });
+  });
   it("recognizes a multi-file episode set as a season pack", () =>
     expect(
       classify("Some.Show.2020.S02.1080p", [

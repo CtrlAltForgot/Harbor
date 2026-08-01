@@ -19,7 +19,6 @@ import {
   Plus,
   Search,
   Settings,
-  SlidersHorizontal,
   Upload,
   Wifi,
   X,
@@ -152,7 +151,11 @@ export function App() {
               <div>
                 <small>ACTIVE</small>
                 <strong>
-                  {items.filter((x) => x.status === "downloading").length}
+                  {
+                    items.filter((x) =>
+                      ["queued", "downloading", "paused"].includes(x.status),
+                    ).length
+                  }
                 </strong>
                 <span>transfers</span>
               </div>
@@ -200,9 +203,6 @@ export function App() {
                     placeholder="Search downloads"
                   />
                 </label>
-                <button className="icon-button">
-                  <SlidersHorizontal />
-                </button>
               </div>
             </section>
             {error && (
@@ -266,11 +266,20 @@ function TorrentRow({
   review: () => void;
 }) {
   const [actionOpen, setActionOpen] = useState(false),
-    [expanded, setExpanded] = useState(false);
+    [expanded, setExpanded] = useState(false),
+    [removeOpen, setRemoveOpen] = useState(false),
+    [actionError, setActionError] = useState("");
   async function act(action: string) {
     setActionOpen(false);
-    await api.action(t.id, action);
-    refresh();
+    setActionError("");
+    try {
+      await api.action(t.id, action);
+      refresh();
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Torrent control failed",
+      );
+    }
   }
   return (
     <>
@@ -330,20 +339,26 @@ function TorrentRow({
             </em>
           ) : t.status === "removed" ? (
             <em className="complete">Archived</em>
+          ) : t.status === "failed" ? (
+            <em className="failed-state" title={t.error}>
+              <AlertTriangle /> Attention
+            </em>
           ) : (
             fmtEta(t.etaSeconds)
           )}
         </span>
         <div className="row-actions">
+          {!['removed', 'failed'].includes(t.status) && (
+            <button
+              className="icon-button"
+              title={t.status === "paused" ? "Resume" : "Pause"}
+              onClick={() => act(t.status === "paused" ? "resume" : "pause")}
+            >
+              {t.status === "paused" ? <Play /> : <Pause />}
+            </button>
+          )}
           {t.status !== "removed" && (
             <>
-          <button
-            className="icon-button"
-            title={t.status === "paused" ? "Resume" : "Pause"}
-            onClick={() => act(t.status === "paused" ? "resume" : "pause")}
-          >
-            {t.status === "paused" ? <Play /> : <Pause />}
-          </button>
           <button
             className="icon-button"
             onClick={() => setActionOpen(!actionOpen)}
@@ -369,7 +384,7 @@ function TorrentRow({
                   Re-organize &amp; clean staging
                 </button>
               )}
-              <button
+              {t.status !== "failed" && <button
                 onClick={async () => {
                   await api.retention(t.id, "remove");
                   setActionOpen(false);
@@ -377,8 +392,8 @@ function TorrentRow({
                 }}
               >
                 Organize & clean staging
-              </button>
-              <button
+              </button>}
+              {t.status !== "failed" && <button
                 onClick={async () => {
                   await api.retention(t.id, "seed");
                   setActionOpen(false);
@@ -386,19 +401,13 @@ function TorrentRow({
                 }}
               >
                 Keep seeding
-              </button>
-              <button onClick={() => act("recheck")}>Recheck files</button>
+              </button>}
+              {t.status !== "failed" && <button onClick={() => act("recheck")}>Recheck files</button>}
               <button
                 className="danger"
-                onClick={async () => {
-                  if (
-                    confirm(
-                      "Remove this torrent from qBittorrent and archive it in Harbor history? Downloaded data will be kept.",
-                    )
-                  ) {
-                    await api.remove(t.id);
-                    refresh();
-                  }
+                onClick={() => {
+                  setActionOpen(false);
+                  setRemoveOpen(true);
                 }}
               >
                 Remove torrent &amp; archive history
@@ -409,6 +418,7 @@ function TorrentRow({
           )}
         </div>
       </article>
+      {actionError && <div className="row-error">{actionError}</div>}
       {expanded && (
         <div className="file-details">
           {t.organizedPath && (
@@ -451,7 +461,101 @@ function TorrentRow({
           ))}
         </div>
       )}
+      {removeOpen && (
+        <RemoveTorrent
+          torrent={t}
+          close={() => setRemoveOpen(false)}
+          removed={() => {
+            setRemoveOpen(false);
+            refresh();
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function RemoveTorrent({
+  torrent,
+  close,
+  removed,
+}: {
+  torrent: Torrent;
+  close: () => void;
+  removed: () => void;
+}) {
+  const [deleteFiles, setDeleteFiles] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  async function remove() {
+    setBusy(true);
+    setError("");
+    try {
+      await api.remove(torrent.id, deleteFiles);
+      removed();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Torrent could not be removed");
+      setBusy(false);
+    }
+  }
+  return (
+    <div
+      className="scrim"
+      onMouseDown={(event) => event.target === event.currentTarget && close()}
+    >
+      <section className="confirm-card">
+        <header>
+          <div>
+            <p className="eyebrow">REMOVE TORRENT</p>
+            <h2>{torrent.name}</h2>
+          </div>
+          <button className="icon-button" onClick={close}>
+            <X />
+          </button>
+        </header>
+        <p>
+          The torrent will be removed from qBittorrent and retained in Harbor
+          history.
+        </p>
+        <label className="delete-files-choice">
+          <input
+            type="checkbox"
+            checked={deleteFiles}
+            onChange={(event) => setDeleteFiles(event.target.checked)}
+          />
+          <span>
+            <strong>Also delete original downloaded files</strong>
+            <small>
+              Only Harbor's incomplete-download path may be deleted. An
+              organized library copy is never deleted.
+            </small>
+          </span>
+        </label>
+        {deleteFiles && (
+          <div className="destructive-warning">
+            <AlertTriangle /> This permanently deletes the original staging
+            files after qBittorrent confirms removal.
+          </div>
+        )}
+        {error && (
+          <div className="error">
+            <AlertTriangle /> {error}
+          </div>
+        )}
+        <footer>
+          <button className="quiet" onClick={close}>
+            Cancel
+          </button>
+          <button className="danger-action" disabled={busy} onClick={remove}>
+            {busy
+              ? "Removing…"
+              : deleteFiles
+                ? "Remove and delete files"
+                : "Remove torrent"}
+          </button>
+        </footer>
+      </section>
+    </div>
   );
 }
 

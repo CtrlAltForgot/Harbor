@@ -490,6 +490,101 @@ select {
   font-size: 11px;
   line-height: 1.45;
 }
+.row-error {
+  padding: 9px 18px;
+  color: #f0aa99;
+  background: #2d201c;
+  border: 1px solid #57352d;
+  font-size: 11px;
+}
+.failed-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #ed9d8c;
+  font-style: normal;
+}
+.failed-state svg {
+  width: 14px;
+}
+.confirm-card {
+  width: min(520px, calc(100vw - 40px));
+  padding: 26px;
+  border: 1px solid #35444a;
+  border-radius: 18px;
+  background: #11191d;
+  box-shadow: 0 30px 100px #000a;
+}
+.confirm-card > header,
+.confirm-card > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.confirm-card h2 {
+  margin: 3px 0 0;
+  font: 700 17px Manrope;
+}
+.confirm-card > p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.delete-files-choice {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.delete-files-choice input {
+  width: 17px;
+  height: 17px;
+  accent-color: #df7867;
+}
+.delete-files-choice span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.delete-files-choice small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+.destructive-warning {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #35241f;
+  color: #f0aa99;
+  font-size: 11px;
+}
+.destructive-warning svg {
+  width: 16px;
+  flex: 0 0 auto;
+}
+.confirm-card footer {
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+.danger-action {
+  border: 1px solid #9b4f43;
+  border-radius: 10px;
+  padding: 10px 15px;
+  background: #713b33;
+  color: #fff;
+  cursor: pointer;
+}
+.mode-label {
+  margin-left: auto;
+  color: #9fc6bf;
+  font-size: 11px;
+  font-weight: 700;
+}
 .offline-banner button {
   border: 0;
   background: transparent;

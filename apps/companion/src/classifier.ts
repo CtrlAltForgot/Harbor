@@ -92,6 +92,7 @@ function cleanTvTitle(value: string) {
       "",
     )
     .replace(/\s*\b(?:19|20)\d{2}\b\s*$/, "")
+    .replace(/[\s._-]+$/, "")
     .trim();
 }
 function cleanMovieTitle(value: string) {

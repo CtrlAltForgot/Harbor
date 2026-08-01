@@ -117,7 +117,7 @@ export function AddTorrent({
             <strong>Downloading on Unraid</strong>
             <small>Files will not be saved to this computer</small>
           </div>
-          <button>Server mode</button>
+          <span className="mode-label">Server mode</span>
         </div>
         <label>
           Magnet link{magnets.length > 1 ? "s" : ""}

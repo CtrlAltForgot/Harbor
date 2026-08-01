@@ -151,8 +151,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ retention }),
     }),
-  remove: (id: string) =>
-    request<Torrent>(`/api/v1/torrents/${id}`, { method: "DELETE" }),
+  remove: (id: string, deleteFiles = false) =>
+    request<Torrent>(`/api/v1/torrents/${id}`, {
+      method: "DELETE",
+      body: JSON.stringify({ deleteFiles }),
+    }),
   correct: (
     id: string,
     input: {

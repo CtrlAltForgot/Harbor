@@ -276,12 +276,14 @@ export async function buildApp(overrides: Partial<Config> = {}) {
         });
       if (qbit) {
         const category = torrent.classification.category;
-        if (input.magnet) await qbit.addMagnet(input.magnet, category);
+        if (input.magnet)
+          await qbit.addMagnet(input.magnet, category, torrent.infoHash);
         else
           await qbit.addFile(
             Buffer.from(input.torrentBase64!, "base64"),
             input.fileName ?? `${torrent.name}.torrent`,
             category,
+            torrent.infoHash,
           );
       }
       store.save(torrent);
@@ -519,7 +521,33 @@ export async function buildApp(overrides: Partial<Config> = {}) {
     const id = (request.params as any).id;
     const current = store.get(id);
     if (!current) return reply.code(404).send({ error: "Torrent not found" });
-    if (qbit) await qbit.remove(current.infoHash, false);
+    const parsed = z
+      .object({ deleteFiles: z.boolean().default(false) })
+      .safeParse(request.body ?? {});
+    if (!parsed.success)
+      return reply.code(400).send({ error: "Invalid removal options" });
+    if (qbit) {
+      if (parsed.data.deleteFiles) {
+        const remote = (await qbit.list()).find(
+          (item) => item.hash.toLowerCase() === current.infoHash.toLowerCase(),
+        );
+        if (!remote)
+          return reply.code(400).send({
+            error: "qBittorrent no longer has the original files to delete",
+          });
+        const source =
+          remote.content_path || path.join(remote.save_path, remote.name);
+        const relative = path.relative(
+          path.resolve(config.incompleteDir),
+          path.resolve(source),
+        );
+        if (!relative || relative.startsWith("..") || path.isAbsolute(relative))
+          return reply.code(400).send({
+            error: "Refusing to delete files outside Harbor incomplete storage",
+          });
+      }
+      await qbit.remove(current.infoHash, parsed.data.deleteFiles);
+    }
     const archived: Torrent = {
       ...current,
       status: "removed",
@@ -529,7 +557,9 @@ export async function buildApp(overrides: Partial<Config> = {}) {
       error: undefined,
     };
     store.save(archived);
-    store.audit("torrent.archived", id, { downloadedDataDeleted: false });
+    store.audit("torrent.archived", id, {
+      downloadedDataDeleted: parsed.data.deleteFiles,
+    });
     broadcast({ type: "torrent.updated", torrent: archived });
     return archived;
   });
@@ -555,7 +585,26 @@ export async function buildApp(overrides: Partial<Config> = {}) {
         );
         for (const torrent of store.list()) {
           const found = byHash.get(torrent.infoHash.toLowerCase());
-          if (!found) continue;
+          if (!found) {
+            if (
+              !["organized", "removed"].includes(torrent.status)
+            ) {
+              const missing: Torrent = {
+                ...torrent,
+                status: "failed",
+                downloadSpeed: 0,
+                uploadSpeed: 0,
+                etaSeconds: null,
+                seeds: 0,
+                peers: 0,
+                error: "Torrent is not present in qBittorrent",
+              };
+              store.save(missing);
+              store.audit("torrent.missing_from_engine", torrent.id, {});
+              broadcast({ type: "torrent.updated", torrent: missing });
+            }
+            continue;
+          }
           let next = await qbit.sync(torrent, found);
           if (
             next.category === "auto" &&
@@ -628,6 +677,9 @@ export async function buildApp(overrides: Partial<Config> = {}) {
               next = {
                 ...next,
                 status: "organized",
+                downloadSpeed: 0,
+                uploadSpeed: 0,
+                etaSeconds: 0,
                 organizedPath: result.destination,
                 organizedHostPath: hostMediaPath(config, result.destination),
               };
