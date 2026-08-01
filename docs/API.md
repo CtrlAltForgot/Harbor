@@ -19,9 +19,10 @@ Base URL: `http://SERVER:7331`. All `/api/v1/*` routes except pairing require `A
 | POST | `/api/v1/torrents/:id/files/priority` | Set `{ids,priority}` |
 | POST | `/api/v1/torrents/:id/limits` | Set byte/sec `{download,upload}` limits |
 | PATCH | `/api/v1/torrents/:id/classification` | Confirm or correct category/title/episode data |
+| PATCH | `/api/v1/torrents/:id/retention` | Change `{retention}`; cleanup can be applied to an already organized torrent |
 | DELETE | `/api/v1/torrents/:id` | Remove queue record; never deletes data in this version |
 | WS | `/api/v1/events` | Snapshot and update messages |
 
 Duplicate info hashes return `409` with the existing torrent. Errors use `{ "error": "human-readable message" }`.
 
-After verified organization, torrent records contain `organizedPath`, the exact final filesystem location displayed by Harbor.
+After verified organization, torrent records contain `organizedPath` and, when installed through Compose, `organizedHostPath`. The latter is the exact Unraid host location displayed by Harbor.

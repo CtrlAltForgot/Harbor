@@ -146,6 +146,11 @@ export const api = {
     }),
   action: (id: string, action: string) =>
     request<Torrent>(`/api/v1/torrents/${id}/${action}`, { method: "POST" }),
+  retention: (id: string, retention: "seed" | "stop" | "remove" | "ask") =>
+    request<Torrent>(`/api/v1/torrents/${id}/retention`, {
+      method: "PATCH",
+      body: JSON.stringify({ retention }),
+    }),
   remove: (id: string) =>
     request<void>(`/api/v1/torrents/${id}`, { method: "DELETE" }),
   correct: (

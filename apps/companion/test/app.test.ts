@@ -156,6 +156,29 @@ describe("companion API", () => {
     expect(escaped.statusCode).toBe(400);
     await app.close();
   });
+  it("updates an existing torrent cleanup policy", async () => {
+    const app = await setup();
+    const auth = `Bearer ${await token(app)}`;
+    const added = await app.inject({
+      method: "POST",
+      url: "/api/v1/torrents",
+      headers: { authorization: auth },
+      payload: {
+        magnet:
+          "magnet:?xt=urn:btih:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb&dn=Example.Movie.2025",
+        retention: "seed",
+      },
+    });
+    const changed = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/torrents/${added.json().id}/retention`,
+      headers: { authorization: auth },
+      payload: { retention: "remove" },
+    });
+    expect(changed.statusCode).toBe(200);
+    expect(changed.json().retention).toBe("remove");
+    await app.close();
+  });
 });
 async function tokenWith(app: any, code: string) {
   return (

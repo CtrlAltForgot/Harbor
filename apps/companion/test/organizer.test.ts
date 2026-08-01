@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   buildRelativeName,
+  cleanupStaging,
   organize,
   validateDestination,
 } from "../src/organizer.js";
@@ -176,5 +177,18 @@ describe("safe organizer", () => {
         "utf8",
       ),
     ).toBe("new");
+  });
+  it("cleans only a child path inside incomplete storage", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "harbor-org-"));
+    roots.push(root);
+    const incomplete = path.join(root, "incomplete"),
+      source = path.join(incomplete, "finished");
+    await mkdir(source, { recursive: true });
+    writeFileSync(path.join(source, "video.mkv"), "done");
+    await cleanupStaging(source, incomplete);
+    expect(() => readFileSync(path.join(source, "video.mkv"))).toThrow();
+    await expect(cleanupStaging(incomplete, incomplete)).rejects.toThrow(
+      /Refusing/,
+    );
   });
 });

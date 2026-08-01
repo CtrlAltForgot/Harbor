@@ -14,7 +14,7 @@ import { createTorrent, tick } from "./engine.js";
 import { Store } from "./store.js";
 import { QbitClient } from "./qbittorrent.js";
 import { classify } from "./classifier.js";
-import { organize } from "./organizer.js";
+import { cleanupStaging, organize } from "./organizer.js";
 import { TmdbMatcher } from "./metadata.js";
 import path from "node:path";
 import { access, stat } from "node:fs/promises";
@@ -38,7 +38,7 @@ const addSchema = z
         "review",
       ])
       .default("auto"),
-    retention: z.enum(["seed", "stop", "remove", "ask"]).default("seed"),
+    retention: z.enum(["seed", "stop", "remove", "ask"]).default("remove"),
     mode: z.enum(["server", "local"]).default("server"),
   })
   .refine(
@@ -59,6 +59,13 @@ export async function buildApp(overrides: Partial<Config> = {}) {
   let tmdbToken =
     store.setting("tmdb.accessToken") ?? process.env.TMDB_ACCESS_TOKEN ?? "";
   let metadataLanguage = store.setting("metadata.language") ?? "en-US";
+  if (config.mediaHostRoot)
+    for (const torrent of store.list())
+      if (torrent.organizedPath && !torrent.organizedHostPath)
+        store.save({
+          ...torrent,
+          organizedHostPath: hostMediaPath(config, torrent.organizedPath),
+        });
   const qbit =
     config.engine === "qbittorrent" ? new QbitClient(config) : undefined;
   const app = Fastify({
@@ -149,6 +156,7 @@ export async function buildApp(overrides: Partial<Config> = {}) {
   app.get("/api/v1/torrents", async () => store.list());
   app.get("/api/v1/settings", async (): Promise<HarborSettings> => ({
     mediaRoot,
+    mediaHostRoot: config.mediaHostRoot,
     moviesDir: config.destinations.movie!,
     tvDir: config.destinations.tv!,
     reviewDir: config.destinations.review!,
@@ -174,12 +182,10 @@ export async function buildApp(overrides: Partial<Config> = {}) {
           .sort(),
       };
     } catch (error) {
-      return reply
-        .code(400)
-        .send({
-          error:
-            error instanceof Error ? error.message : "Folder could not be read",
-        });
+      return reply.code(400).send({
+        error:
+          error instanceof Error ? error.message : "Folder could not be read",
+      });
     }
   });
   app.put("/api/v1/settings", async (request, reply) => {
@@ -206,14 +212,12 @@ export async function buildApp(overrides: Partial<Config> = {}) {
           throw new Error(`${target} is not a directory`);
       }
     } catch (error) {
-      return reply
-        .code(400)
-        .send({
-          error:
-            error instanceof Error
-              ? error.message
-              : "Storage path is unavailable",
-        });
+      return reply.code(400).send({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Storage path is unavailable",
+      });
     }
     config.destinations.movie = path.resolve(parsed.data.moviesDir);
     config.destinations.tv = path.resolve(parsed.data.tvDir);
@@ -241,6 +245,7 @@ export async function buildApp(overrides: Partial<Config> = {}) {
     });
     return {
       mediaRoot,
+      mediaHostRoot: config.mediaHostRoot,
       moviesDir: config.destinations.movie,
       tvDir: config.destinations.tv,
       reviewDir: config.destinations.review,
@@ -265,12 +270,10 @@ export async function buildApp(overrides: Partial<Config> = {}) {
       const torrent = createTorrent(input, config.destinations);
       const duplicate = store.byHash(torrent.infoHash);
       if (duplicate)
-        return reply
-          .code(409)
-          .send({
-            error: "This torrent is already in Harbor",
-            torrent: duplicate,
-          });
+        return reply.code(409).send({
+          error: "This torrent is already in Harbor",
+          torrent: duplicate,
+        });
       if (qbit) {
         const category = torrent.classification.category;
         if (input.magnet) await qbit.addMagnet(input.magnet, category);
@@ -289,14 +292,10 @@ export async function buildApp(overrides: Partial<Config> = {}) {
       broadcast({ type: "torrent.updated", torrent });
       return reply.code(201).send(torrent);
     } catch (error) {
-      return reply
-        .code(400)
-        .send({
-          error:
-            error instanceof Error
-              ? error.message
-              : "Torrent could not be added",
-        });
+      return reply.code(400).send({
+        error:
+          error instanceof Error ? error.message : "Torrent could not be added",
+      });
     }
   });
   app.post("/api/v1/torrents/:id/:action", async (request, reply) => {
@@ -367,6 +366,55 @@ export async function buildApp(overrides: Partial<Config> = {}) {
       );
     store.audit("torrent.limits", id, parsed.data);
     return reply.code(204).send();
+  });
+  app.patch("/api/v1/torrents/:id/retention", async (request, reply) => {
+    const id = (request.params as any).id;
+    const current = store.get(id);
+    if (!current) return reply.code(404).send({ error: "Torrent not found" });
+    const parsed = z
+      .object({ retention: z.enum(["seed", "stop", "remove", "ask"]) })
+      .safeParse(request.body);
+    if (!parsed.success)
+      return reply.code(400).send({ error: "Invalid retention policy" });
+    if (
+      parsed.data.retention === "remove" &&
+      current.status === "organized" &&
+      qbit
+    ) {
+      try {
+        if (
+          !current.organizedPath ||
+          (!(await stat(current.organizedPath)).isDirectory() &&
+            !(await stat(current.organizedPath)).isFile())
+        )
+          throw new Error("The organized library result could not be verified");
+        const remote = (await qbit.list()).find(
+          (item) => item.hash.toLowerCase() === current.infoHash.toLowerCase(),
+        );
+        if (remote) {
+          const source =
+            remote.content_path || path.join(remote.save_path, remote.name);
+          await qbit.remove(current.infoHash, false);
+          await cleanupStaging(source, config.incompleteDir);
+          store.audit("staging.cleaned", id, {
+            source,
+            requestedAfterOrganization: true,
+          });
+        }
+      } catch (error) {
+        return reply
+          .code(400)
+          .send({
+            error:
+              error instanceof Error ? error.message : "Staging cleanup failed",
+          });
+      }
+    }
+    const next = { ...current, retention: parsed.data.retention };
+    store.save(next);
+    store.audit("retention.changed", id, parsed.data);
+    broadcast({ type: "torrent.updated", torrent: next });
+    return next;
   });
   app.patch("/api/v1/torrents/:id/classification", async (request, reply) => {
     const id = (request.params as any).id;
@@ -517,12 +565,16 @@ export async function buildApp(overrides: Partial<Config> = {}) {
                 ...next,
                 status: "organized",
                 organizedPath: result.destination,
+                organizedHostPath: hostMediaPath(config, result.destination),
               };
               store.audit("organization.completed", next.id, result);
               if (next.retention === "stop")
                 await qbit.action(next.infoHash, "pause");
-              else if (next.retention === "remove")
+              else if (next.retention === "remove") {
                 await qbit.remove(next.infoHash, false);
+                await cleanupStaging(source, config.incompleteDir);
+                store.audit("staging.cleaned", next.id, { source });
+              }
             } catch (error) {
               next = {
                 ...next,
@@ -565,4 +617,12 @@ function assertMediaPath(root: string, target: string) {
   const relative = path.relative(path.resolve(root), path.resolve(target));
   if (relative.startsWith("..") || path.isAbsolute(relative))
     throw new Error(`Folder must be inside the mounted media root (${root})`);
+}
+function hostMediaPath(config: Config, containerPath: string) {
+  return config.mediaHostRoot
+    ? path.join(
+        config.mediaHostRoot,
+        path.relative(config.mediaRoot, containerPath),
+      )
+    : undefined;
 }

@@ -58,6 +58,7 @@ export interface Torrent {
   classification: Classification;
   destination: string;
   organizedPath?: string;
+  organizedHostPath?: string;
   retention: RetentionPolicy;
   createdAt: string;
   completedAt?: string;
@@ -79,6 +80,7 @@ export interface ServerStatus {
 }
 export interface HarborSettings {
   mediaRoot: string;
+  mediaHostRoot?: string;
   moviesDir: string;
   tvDir: string;
   reviewDir: string;

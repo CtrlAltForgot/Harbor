@@ -28,6 +28,23 @@ export async function validateDestination(target: string) {
     throw new Error(`Destination is not a directory: ${target}`);
 }
 
+export async function cleanupStaging(source: string, incompleteRoot: string) {
+  const resolvedRoot = path.resolve(incompleteRoot),
+    resolvedSource = path.resolve(source);
+  const relative = path.relative(resolvedRoot, resolvedSource);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative))
+    throw new Error(
+      "Refusing to clean a path outside or equal to incomplete storage",
+    );
+  await rm(resolvedSource, { recursive: true, force: false });
+  try {
+    await stat(resolvedSource);
+    throw new Error(`Staging cleanup verification failed: ${resolvedSource}`);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
+
 export async function organize(
   source: string,
   destinationRoot: string,

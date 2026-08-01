@@ -71,7 +71,11 @@ It normally takes a few minutes on the first run while Docker downloads and buil
 
 After pairing, open **Settings** in Harbor. Select `/media/Movies`, `/media/TV Shows`, and `/media/Needs Review`, then choose **Save and verify**. These are container views of the Unraid media root selected during installation; Harbor verifies they are writable.
 
+Settings also displays the corresponding Unraid host root, for example `/mnt/user/PCFiles → /media`. Confirm that the host root is the parent containing the Movies and TV Shows folders you actually browse over SMB. If it is wrong, rerun `./scripts/install-unraid.sh` and enter the correct media root; changing a container subfolder cannot change the Docker host mount.
+
 For substantially better title identification, paste a TMDB API Read Access Token in the same screen. TMDB is optional and local filename classification still works without it. Ambiguous matches are held for review rather than guessed.
+
+New torrents default to **Organize and clean downloads**. Harbor copies into the selected library, verifies the result, removes the qBittorrent job without deleting the library copy, deletes only that torrent's staging path, and verifies the staging path is gone. Choose **Keep seeding** explicitly when you want the staging data retained.
 
 ## Step 3: install Harbor Desktop on Nobara
 
@@ -86,7 +90,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-aa8650b1f634388f13a27d89571352a199917e6939963c2155ff22136e89d414
+dc497558d83f0a0f853d717fdbbb4810d4acb3168eeca9d7e606ec163e50867d
 ```
 
 ## Step 4: pair

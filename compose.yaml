@@ -11,6 +11,7 @@ services:
       QBITTORRENT_PASSWORD: ${QBITTORRENT_PASSWORD:?Set the qBittorrent Web UI password in .env}
       HARBOR_INCOMPLETE_DIR: /downloads/incomplete
       HARBOR_MEDIA_ROOT: /media
+      HARBOR_MEDIA_HOST_PATH: ${MEDIA_ROOT_PATH:-./dev-storage/media}
       HARBOR_MOVIES_DIR: ${HARBOR_MOVIES_DIR:-/media/Movies}
       HARBOR_TV_DIR: ${HARBOR_TV_DIR:-/media/TV Shows}
       HARBOR_REVIEW_DIR: ${HARBOR_REVIEW_DIR:-/media/Needs Review}

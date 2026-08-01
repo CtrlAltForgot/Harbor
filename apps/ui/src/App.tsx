@@ -11,8 +11,6 @@ import {
   CheckCircle2,
   Download,
   FolderCheck,
-  History,
-  LayoutGrid,
   MoreHorizontal,
   Pause,
   Play,
@@ -91,60 +89,52 @@ export function App() {
     );
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <header className="app-header">
         <div className="brand">
           <span className="logo">
             <Anchor />
           </span>
           <strong>Harbor</strong>
         </div>
-        <nav>
-          <Nav
-            icon={<LayoutGrid />}
-            label="Downloads"
-            active={view === "downloads"}
-            onClick={() => setView("downloads")}
-            count={items.filter((x) => x.status === "downloading").length}
-          />
-          <Nav
-            icon={<AlertTriangle />}
-            label="Needs review"
-            count={items.filter((x) => x.status === "review").length}
-            onClick={() => {
-              setView("downloads");
-              setFilter("review");
-            }}
-          />
-          <Nav icon={<History />} label="History" />
-          <Nav icon={<FolderCheck />} label="Library" />
-          <div className="nav-rule" />
-          <Nav
-            icon={<Settings />}
-            label="Settings"
-            active={view === "settings"}
-            onClick={() => setView("settings")}
-          />
-        </nav>
-        <div className="server-card">
+        <div className="header-server">
           <div>
             <span className={error ? "status-dot offline" : "status-dot"} />
             <strong>{connection.get()?.serverName}</strong>
           </div>
-          <small>
+          <span>
             {error
               ? "Connection interrupted"
-              : `${status?.engine ?? "…"} engine · Online`}
-          </small>
-          <div className="server-stats">
-            <span>
-              <Download /> {fmtSpeed(status?.downloadSpeed ?? 0)}
-            </span>
-            <span>
-              <Upload /> {fmtSpeed(status?.uploadSpeed ?? 0)}
-            </span>
-          </div>
+              : `${fmtSpeed(status?.downloadSpeed ?? 0)} down · ${fmtSpeed(status?.uploadSpeed ?? 0)} up`}
+          </span>
         </div>
-      </aside>
+        <div className="header-actions">
+          {view === "settings" && (
+            <button
+              className="quiet header-nav"
+              onClick={() => setView("downloads")}
+            >
+              <Download /> Downloads
+            </button>
+          )}
+          <button className="connection">
+            <Wifi /> {error ? "Attention needed" : "Unraid connected"}
+          </button>
+          <button
+            className={
+              view === "settings" ? "icon-button active" : "icon-button"
+            }
+            title="Settings"
+            onClick={() =>
+              setView(view === "settings" ? "downloads" : "settings")
+            }
+          >
+            <Settings />
+          </button>
+          <button className="primary" onClick={() => setAdding(true)}>
+            <Plus /> Add torrent
+          </button>
+        </div>
+      </header>
       <main className="content">
         {view === "settings" ? (
           <SettingsPage />
@@ -154,14 +144,6 @@ export function App() {
               <div>
                 <p className="eyebrow">YOUR SERVER</p>
                 <h1>Downloads</h1>
-              </div>
-              <div className="top-actions">
-                <button className="connection">
-                  <Wifi /> {error ? "Attention needed" : "Unraid connected"}
-                </button>
-                <button className="primary" onClick={() => setAdding(true)}>
-                  <Plus /> Add torrent
-                </button>
               </div>
             </header>
             <section className="summary">
@@ -268,31 +250,6 @@ export function App() {
     </div>
   );
 }
-
-function Nav({
-  icon,
-  label,
-  active,
-  count,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active?: boolean;
-  count?: number;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      className={active ? "nav-item active" : "nav-item"}
-      onClick={onClick}
-    >
-      {icon}
-      <span>{label}</span>
-      {!!count && <b>{count}</b>}
-    </button>
-  );
-}
 function TorrentRow({
   torrent: t,
   refresh,
@@ -320,13 +277,22 @@ function TorrentRow({
             <strong>{t.name}</strong>
             <p>
               <span className="category">{t.classification.category}</span>
-              <span title={t.organizedPath ?? t.destination}>
+              <span
+                title={t.organizedHostPath ?? t.organizedPath ?? t.destination}
+              >
                 {t.organizedPath
-                  ? `moved to ${t.organizedPath}`
+                  ? `organized at ${t.organizedHostPath ?? t.organizedPath}`
                   : `will move to ${t.destination}`}
               </span>
               <span>
                 {t.seeds} seeds · {t.peers} peers
+              </span>
+              <span>
+                {t.retention === "remove"
+                  ? "clean staging after"
+                  : t.retention === "seed"
+                    ? "keep seeding"
+                    : "retain staging"}
               </span>
             </p>
           </div>
@@ -376,6 +342,24 @@ function TorrentRow({
           </button>
           {actionOpen && (
             <div className="action-menu">
+              <button
+                onClick={async () => {
+                  await api.retention(t.id, "remove");
+                  setActionOpen(false);
+                  refresh();
+                }}
+              >
+                Organize & clean staging
+              </button>
+              <button
+                onClick={async () => {
+                  await api.retention(t.id, "seed");
+                  setActionOpen(false);
+                  refresh();
+                }}
+              >
+                Keep seeding
+              </button>
               <button onClick={() => act("recheck")}>Recheck files</button>
               <button
                 className="danger"
@@ -403,7 +387,10 @@ function TorrentRow({
               <FolderCheck />
               <span>
                 <small>ORGANIZED LOCATION</small>
-                <strong>{t.organizedPath}</strong>
+                <strong>{t.organizedHostPath ?? t.organizedPath}</strong>
+                {t.organizedHostPath && (
+                  <small>Container path: {t.organizedPath}</small>
+                )}
               </span>
             </div>
           )}
@@ -532,7 +519,10 @@ function SettingsPage() {
             <div className="mount-note">
               <FolderCheck />
               <span>
-                Unraid media share mounted at{" "}
+                <strong>
+                  {settings.mediaHostRoot ?? "Unraid host path unavailable"}
+                </strong>{" "}
+                is mounted inside Harbor as{" "}
                 <strong>{settings.mediaRoot}</strong>
               </span>
             </div>

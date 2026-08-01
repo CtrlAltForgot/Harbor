@@ -5,7 +5,7 @@ repo_dir="$(cd -- "$script_dir/.." && pwd)"
 cd "$repo_dir"
 
 fail(){ printf 'Harbor desktop install failed: %s\n' "$*" >&2; exit 1; }
-rpm_path="$repo_dir/release/Harbor-0.1.0-3.x86_64.rpm"
+rpm_path="$repo_dir/release/Harbor-0.1.0-4.x86_64.rpm"
 if [[ -f "$rpm_path" ]]; then
   printf 'Using the included Harbor Desktop RPM.\n'
 else
@@ -14,7 +14,7 @@ else
   printf 'Building Harbor Desktop for Nobara...\n'
   npm install
   npm run build -w @harbor/desktop
-  rpm_path="$repo_dir/apps/desktop/src-tauri/target/release/bundle/rpm/Harbor-0.1.0-3.x86_64.rpm"
+  rpm_path="$repo_dir/apps/desktop/src-tauri/target/release/bundle/rpm/Harbor-0.1.0-4.x86_64.rpm"
   [[ -f "$rpm_path" ]] || fail "The RPM build did not produce $rpm_path"
 fi
 

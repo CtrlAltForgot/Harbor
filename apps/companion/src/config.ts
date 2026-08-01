@@ -12,6 +12,7 @@ export interface Config {
   incompleteDir: string;
   uiDir?: string;
   mediaRoot: string;
+  mediaHostRoot?: string;
   destinations: Record<string, string>;
 }
 
@@ -42,6 +43,8 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
       process.env.HARBOR_INCOMPLETE_DIR ??
       "/downloads/incomplete",
     mediaRoot: overrides.mediaRoot ?? process.env.HARBOR_MEDIA_ROOT ?? "/media",
+    mediaHostRoot:
+      overrides.mediaHostRoot ?? process.env.HARBOR_MEDIA_HOST_PATH,
     uiDir: overrides.uiDir ?? process.env.HARBOR_UI_DIR,
     destinations: overrides.destinations ?? {
       movie: process.env.HARBOR_MOVIES_DIR ?? "/media/Movies",
