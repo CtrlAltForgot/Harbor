@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { Category, RetentionPolicy } from "@harbor/contracts";
 import { api } from "../lib/api";
+import { extractMagnets } from "../lib/magnets";
 
 export function AddTorrent({
   close,
@@ -26,6 +27,7 @@ export function AddTorrent({
     [retention, setRetention] = useState<RetentionPolicy>("remove");
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const magnets = extractMagnets(magnet);
   async function choose(file?: File) {
     if (!file) return;
     if (!file.name.toLowerCase().endsWith(".torrent")) {
@@ -48,19 +50,44 @@ export function AddTorrent({
     setBusy(true);
     setError("");
     try {
-      await api.add(
-        torrentFile
-          ? {
-              torrentBase64: torrentFile.base64,
-              fileName: torrentFile.name,
-              category,
-              retention,
-              mode: "server",
-            }
-          : { magnet, category, retention, mode: "server" },
+      if (torrentFile) {
+        await api.add({
+          torrentBase64: torrentFile.base64,
+          fileName: torrentFile.name,
+          category,
+          retention,
+          mode: "server",
+        });
+        added();
+        close();
+        return;
+      }
+      if (!magnets.length)
+        throw new Error("Paste at least one valid magnet link");
+      const failures: { magnet: string; error: string }[] = [];
+      let succeeded = 0;
+      for (const link of magnets) {
+        try {
+          await api.add({ magnet: link, category, retention, mode: "server" });
+          succeeded++;
+        } catch (e) {
+          failures.push({
+            magnet: link,
+            error: e instanceof Error ? e.message : "Could not add torrent",
+          });
+        }
+      }
+      if (succeeded) added();
+      if (!failures.length) {
+        close();
+        return;
+      }
+      setMagnet(failures.map((failure) => failure.magnet).join("\n"));
+      setError(
+        `${succeeded} added, ${failures.length} not added: ${failures
+          .map((failure) => failure.error)
+          .join("; ")}`,
       );
-      added();
-      close();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not add torrent");
     } finally {
@@ -93,7 +120,7 @@ export function AddTorrent({
           <button>Server mode</button>
         </div>
         <label>
-          Magnet link
+          Magnet link{magnets.length > 1 ? "s" : ""}
           <div className="input-icon">
             <Link2 size={17} />
             <textarea
@@ -103,9 +130,17 @@ export function AddTorrent({
                 setMagnet(e.target.value);
                 setTorrentFile(null);
               }}
-              placeholder="magnet:?xt=urn:btih:…"
+              placeholder={
+                "Paste one or multiple magnet links, one per line\nmagnet:?xt=urn:btih:…"
+              }
             />
           </div>
+          {magnets.length > 1 && (
+            <small className="batch-count">
+              {magnets.length} unique torrents detected. The category and
+              cleanup choice below will apply to all of them.
+            </small>
+          )}
         </label>
         <div className="file-choice">
           <span>or</span>
@@ -188,10 +223,14 @@ export function AddTorrent({
           </button>
           <button
             className="primary"
-            disabled={(!magnet && !torrentFile) || busy}
+            disabled={(!magnets.length && !torrentFile) || busy}
             onClick={submit}
           >
-            {busy ? "Adding…" : "Start on server"}
+            {busy
+              ? `Adding${magnets.length > 1 ? ` ${magnets.length} torrents` : ""}…`
+              : magnets.length > 1
+                ? `Start ${magnets.length} torrents on server`
+                : "Start on server"}
           </button>
         </footer>
       </section>

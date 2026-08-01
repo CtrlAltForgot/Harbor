@@ -520,9 +520,18 @@ export async function buildApp(overrides: Partial<Config> = {}) {
     const current = store.get(id);
     if (!current) return reply.code(404).send({ error: "Torrent not found" });
     if (qbit) await qbit.remove(current.infoHash, false);
-    store.remove(id);
-    broadcast({ type: "torrent.removed", torrentId: id });
-    return reply.code(204).send();
+    const archived: Torrent = {
+      ...current,
+      status: "removed",
+      downloadSpeed: 0,
+      uploadSpeed: 0,
+      etaSeconds: null,
+      error: undefined,
+    };
+    store.save(archived);
+    store.audit("torrent.archived", id, { downloadedDataDeleted: false });
+    broadcast({ type: "torrent.updated", torrent: archived });
+    return archived;
   });
   app.get("/api/v1/events", { websocket: true }, (socket) => {
     clients.add(socket);

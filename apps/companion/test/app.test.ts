@@ -106,6 +106,43 @@ describe("companion API", () => {
     ).toHaveLength(1);
     await app.close();
   });
+  it("archives removed torrents and preserves their history across restart", async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), "harbor-test-"));
+    dirs.push(dataDir);
+    let app = await buildApp({ dataDir, pairingCode: "x", engine: "mock" });
+    let auth = `Bearer ${await tokenWith(app, "x")}`;
+    const added = await app.inject({
+      method: "POST",
+      url: "/api/v1/torrents",
+      headers: { authorization: auth },
+      payload: {
+        magnet:
+          "magnet:?xt=urn:btih:dddddddddddddddddddddddddddddddddddddddd&dn=Archived.Show.S03",
+      },
+    });
+    const removed = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/torrents/${added.json().id}`,
+      headers: { authorization: auth },
+    });
+    expect(removed.statusCode).toBe(200);
+    expect(removed.json().status).toBe("removed");
+    await app.close();
+
+    app = await buildApp({ dataDir, pairingCode: "x", engine: "mock" });
+    auth = `Bearer ${await tokenWith(app, "x")}`;
+    const history = await app.inject({
+      url: "/api/v1/torrents",
+      headers: { authorization: auth },
+    });
+    expect(history.json()).toEqual([
+      expect.objectContaining({
+        infoHash: "dddddddddddddddddddddddddddddddddddddddd",
+        status: "removed",
+      }),
+    ]);
+    await app.close();
+  });
   it("validates media settings and never returns the TMDB token", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "harbor-media-"));
     const dataDir = mkdtempSync(path.join(tmpdir(), "harbor-test-"));

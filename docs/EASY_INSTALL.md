@@ -77,6 +77,10 @@ For substantially better title identification, paste a TMDB API Read Access Toke
 
 New torrents default to **Organize and clean downloads**. Harbor copies into the selected library, verifies the result, removes the qBittorrent job without deleting the library copy, deletes only that torrent's staging path, and verifies the staging path is gone. Choose **Keep seeding** explicitly when you want the staging data retained.
 
+The add sheet accepts either one magnet or multiple magnet links copied together from another torrent client. Paste the complete newline-separated block; Harbor shows the number of unique torrents detected and applies the selected category and retention rule to each. A duplicate or invalid entry is reported independently and does not cancel the other additions.
+
+Harbor's queue, organized entries, archived removals, settings, and audit records are stored in SQLite under the persistent Unraid `/config` mapping. Closing the desktop or restarting the Harbor container does not clear this history. **Remove torrent & archive history** removes the qBittorrent job without deleting its Harbor history entry or downloaded data.
+
 ## Step 3: install Harbor Desktop on Nobara
 
 Open a terminal on the Nobara PC. Download Harbor and run the desktop installer:
@@ -90,7 +94,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-4507c094f6ad3d373805f627fd7a02b7be17af22c47e75a16b1b6e905e1a54bc
+19410311e0f7b2a2e5e1586e9d9fa11ba124f8be72b926b99326e00201bdda42
 ```
 
 ## Step 4: pair

@@ -78,7 +78,7 @@ export function App() {
               ["queued", "downloading"].includes(t.status)) ||
             (filter === "review" && t.status === "review") ||
             (filter === "complete" &&
-              ["organized", "completed"].includes(t.status))) &&
+              ["organized", "completed", "removed"].includes(t.status))) &&
           t.name.toLowerCase().includes(query.toLowerCase()),
       ),
     [items, filter, query],
@@ -328,11 +328,15 @@ function TorrentRow({
             <em className="complete">
               <CheckCircle2 /> Organized
             </em>
+          ) : t.status === "removed" ? (
+            <em className="complete">Archived</em>
           ) : (
             fmtEta(t.etaSeconds)
           )}
         </span>
         <div className="row-actions">
+          {t.status !== "removed" && (
+            <>
           <button
             className="icon-button"
             title={t.status === "paused" ? "Resume" : "Pause"}
@@ -389,7 +393,7 @@ function TorrentRow({
                 onClick={async () => {
                   if (
                     confirm(
-                      "Remove this torrent from Harbor? Downloaded data will be kept.",
+                      "Remove this torrent from qBittorrent and archive it in Harbor history? Downloaded data will be kept.",
                     )
                   ) {
                     await api.remove(t.id);
@@ -397,9 +401,11 @@ function TorrentRow({
                   }
                 }}
               >
-                Remove torrent
+                Remove torrent &amp; archive history
               </button>
             </div>
+          )}
+            </>
           )}
         </div>
       </article>

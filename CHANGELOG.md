@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Added multi-magnet clipboard import with info-hash deduplication and independent per-torrent failure handling, and changed manual torrent removal to preserve an archived history record across restarts.
 - Added an authentication-independent Connection & Pairing settings panel so a changed Unraid pairing code or address can be replaced without locking the desktop out; RPM release 6 includes the recovery flow.
 - Fixed immediate desktop exits caused by WebKitGTK Wayland DMA-BUF protocol errors on Nobara; RPM release 2 enables the compatible renderer automatically.
 - Removed the accidental Build Plan development overlay and moved desktop API calls to native Rust networking to avoid WebKit LAN-request failures; RPM release 3 provides actionable pairing errors.

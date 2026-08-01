@@ -483,6 +483,13 @@ select {
 .offline-banner span {
   flex: 1;
 }
+.batch-count {
+  display: block;
+  margin-top: 7px;
+  color: #78cbbb;
+  font-size: 11px;
+  line-height: 1.45;
+}
 .offline-banner button {
   border: 0;
   background: transparent;
