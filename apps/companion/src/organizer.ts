@@ -34,15 +34,28 @@ export async function organize(
   classification: Classification,
 ): Promise<OrganizationResult> {
   await validateDestination(destinationRoot);
+  classification = await reuseExistingSeriesFolder(
+    destinationRoot,
+    classification,
+  );
   const sourceInfo = await stat(source);
   if (!sourceInfo.isFile() && !sourceInfo.isDirectory())
     throw new Error("Downloaded content is not a regular file or directory");
   const relative = buildRelativeName(source, classification);
   const destination = path.join(destinationRoot, relative);
   assertInside(destinationRoot, destination);
+  let mergeIntoExistingSeason = false;
   try {
-    await stat(destination);
-    throw new Error(`Organization destination already exists: ${destination}`);
+    const existing = await stat(destination);
+    mergeIntoExistingSeason =
+      classification.category === "tv" &&
+      classification.episode === undefined &&
+      sourceInfo.isDirectory() &&
+      existing.isDirectory();
+    if (!mergeIntoExistingSeason)
+      throw new Error(
+        `Organization destination already exists: ${destination}`,
+      );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
@@ -68,11 +81,110 @@ export async function organize(
       throw new Error(
         `Copy verification failed: expected ${sourceBytes} bytes, found ${targetBytes}`,
       );
-    await rename(temporary, destination);
+    if (mergeIntoExistingSeason) {
+      const manifest = await fileManifest(temporary);
+      await assertMergeHasNoCollisions(temporary, destination);
+      await mergeTree(temporary, destination);
+      for (const [relative, size] of manifest) {
+        const merged = await stat(path.join(destination, relative));
+        if (!merged.isFile() || merged.size !== size)
+          throw new Error(`Merged file verification failed: ${relative}`);
+      }
+      await rm(temporary, { recursive: true, force: true });
+    } else await rename(temporary, destination);
     return { source, destination, bytes: targetBytes, method: "copy" };
   } catch (error) {
     await rm(temporary, { recursive: true, force: true });
     throw error;
+  }
+}
+
+async function reuseExistingSeriesFolder(
+  root: string,
+  classification: Classification,
+): Promise<Classification> {
+  if (classification.category !== "tv") return classification;
+  const wanted = normalizeLibraryName(classification.title);
+  const candidates = (await readdir(root, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => ({
+      name: entry.name,
+      normalized: normalizeLibraryName(entry.name),
+    }));
+  const matches = candidates.filter(
+    (candidate) =>
+      candidate.normalized === wanted ||
+      prefixAlias(candidate.normalized, wanted),
+  );
+  if (matches.length !== 1) return classification;
+  return {
+    ...classification,
+    title: matches[0]!.name,
+    reasons: [
+      ...classification.reasons,
+      "matched existing library series folder",
+    ],
+  };
+}
+function normalizeLibraryName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\s*[([]?(?:19|20)\d{2}[)\]]?\s*$/, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+function prefixAlias(a: string, b: string) {
+  const shorter = a.length <= b.length ? a : b,
+    longer = a.length > b.length ? a : b;
+  return shorter.length >= 8 && longer.startsWith(`${shorter} `);
+}
+async function fileManifest(
+  root: string,
+  relative = "",
+  found = new Map<string, number>(),
+): Promise<Map<string, number>> {
+  for (const entry of await readdir(path.join(root, relative), {
+    withFileTypes: true,
+  })) {
+    const child = path.join(relative, entry.name);
+    if (entry.isDirectory()) await fileManifest(root, child, found);
+    else if (entry.isFile())
+      found.set(child, (await stat(path.join(root, child))).size);
+  }
+  return found;
+}
+async function assertMergeHasNoCollisions(
+  source: string,
+  destination: string,
+  relative = "",
+): Promise<void> {
+  for (const entry of await readdir(path.join(source, relative), {
+    withFileTypes: true,
+  })) {
+    const child = path.join(relative, entry.name),
+      target = path.join(destination, child);
+    try {
+      const existing = await stat(target);
+      if (entry.isDirectory() && existing.isDirectory())
+        await assertMergeHasNoCollisions(source, destination, child);
+      else
+        throw new Error(
+          `Organization would overwrite existing library content: ${target}`,
+        );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+}
+async function mergeTree(source: string, destination: string): Promise<void> {
+  await mkdir(destination, { recursive: true });
+  for (const entry of await readdir(source, { withFileTypes: true })) {
+    const from = path.join(source, entry.name),
+      to = path.join(destination, entry.name);
+    if (entry.isDirectory()) {
+      await mergeTree(from, to);
+      await rm(from, { recursive: true, force: true });
+    } else await rename(from, to);
   }
 }
 

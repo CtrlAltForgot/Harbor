@@ -32,14 +32,14 @@ Harbor's download and organizer have passed a genuine Creative Commons torrent t
 
 Required environment variables:
 
-| Variable | Example |
-|---|---|
-| `HARBOR_PAIRING_CODE` | a long random first-pairing secret |
-| `HARBOR_ENGINE` | `qbittorrent` |
-| `QBITTORRENT_URL` | `http://192.168.1.10:8080` or Docker DNS name |
-| `QBITTORRENT_USERNAME` | your qBittorrent Web UI user |
-| `QBITTORRENT_PASSWORD` | your permanent qBittorrent Web UI password |
-| `HARBOR_INCOMPLETE_DIR` | `/downloads/incomplete` |
+| Variable                | Example                                       |
+| ----------------------- | --------------------------------------------- |
+| `HARBOR_PAIRING_CODE`   | a long random first-pairing secret            |
+| `HARBOR_ENGINE`         | `qbittorrent`                                 |
+| `QBITTORRENT_URL`       | `http://192.168.1.10:8080` or Docker DNS name |
+| `QBITTORRENT_USERNAME`  | your qBittorrent Web UI user                  |
+| `QBITTORRENT_PASSWORD`  | your permanent qBittorrent Web UI password    |
+| `HARBOR_INCOMPLETE_DIR` | `/downloads/incomplete`                       |
 
 Map these container paths to explicit Unraid host paths:
 
@@ -59,7 +59,7 @@ Map these container paths to explicit Unraid host paths:
 
 The container runs as PUID/PGID 1000 in Compose by default. Set `PUID` and `PGID` to the owner of your Unraid shares. Harbor reports every missing or unwritable mapping in its status response and desktop banner.
 
-Until an image is published, build on the server with `docker compose build harbor`, or transfer the locally built image. The draft XML template cannot pull from its placeholder repository yet.
+The normal installer builds from the checked-out source so it remains usable even if a registry is unavailable. GitHub Actions also publishes the companion image as `ghcr.io/ctrlaltforgot/harbor:latest`; the draft XML template points to that image for future Community Applications distribution.
 
 ## 4. Cache, mover, and filesystem rules
 

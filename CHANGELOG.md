@@ -7,3 +7,5 @@
 - Validated a genuine Creative Commons download and added primary video/subtitle normalization for directory-based movie and episode torrents.
 - Added tested guided installers for Unraid and Nobara, including automatic qBittorrent first-boot credential configuration and an included desktop RPM.
 - Added persistent in-app Movies/TV/Needs Review selection, optional ambiguity-safe TMDB confirmation, a single existing-media-root mount, and exact organized-path reporting.
+- Established GitHub distribution with clone/pull installation instructions, CI verification, GHCR companion publishing, a sanitized bug-report form, and current repository URLs/checksums.
+- Reused existing television series folders for later seasons and added collision-safe merging of missing episodes into existing season directories.

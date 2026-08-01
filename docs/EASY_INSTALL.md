@@ -16,22 +16,43 @@ The Unraid installer asks for three folders and two optional ports, then automat
 - saves the generated addresses and credentials to a root-readable `INSTALLATION.txt` file;
 - preserves the same credentials when safely rerun for an update.
 
-## Step 1: put Harbor on Unraid
+## Before you begin
 
-Copy this repository to a persistent Unraid folder, for example:
+You need:
 
-```text
-/mnt/user/appdata/harbor-source
+- an Unraid server with Docker enabled;
+- Docker Compose v2 (the Unraid Compose Manager plugin provides it);
+- `curl`, `openssl`, and preferably `git` on Unraid;
+- a Nobara desktop with `sudo` access;
+- the host path of your existing media share, commonly `/mnt/user/media`.
+
+Harbor creates a dedicated qBittorrent on Unraid. Your existing PC qBittorrent is not changed.
+
+## Step 1: download Harbor on Unraid
+
+Open **Unraid → Terminal** and clone the GitHub repository into persistent appdata:
+
+```bash
+git clone --depth 1 https://github.com/CtrlAltForgot/Harbor.git /mnt/user/appdata/harbor-source
+cd /mnt/user/appdata/harbor-source
 ```
 
-You can copy it through an SMB share or clone it with Git if Git is installed. Do not keep the source only in `/tmp`; Unraid clears temporary storage on reboot.
+If the `git` command is unavailable, use the GitHub archive instead:
+
+```bash
+mkdir -p /mnt/user/appdata/harbor-source
+curl -fsSL https://github.com/CtrlAltForgot/Harbor/archive/refs/heads/main.tar.gz \
+  | tar -xz --strip-components=1 -C /mnt/user/appdata/harbor-source
+cd /mnt/user/appdata/harbor-source
+```
+
+Do not install the source under `/tmp`; Unraid clears it during reboot.
 
 ## Step 2: run the Unraid installer
 
-Open **Unraid → Terminal**, then run:
+From the Harbor source directory, run:
 
 ```bash
-cd /mnt/user/appdata/harbor-source
 ./scripts/install-unraid.sh
 ```
 
@@ -54,16 +75,18 @@ For substantially better title identification, paste a TMDB API Read Access Toke
 
 ## Step 3: install Harbor Desktop on Nobara
 
-Copy the repository—or just the `release` folder and installer script—to your Nobara PC. From the repository directory run:
+Open a terminal on the Nobara PC. Download Harbor and run the desktop installer:
 
 ```bash
+git clone --depth 1 https://github.com/CtrlAltForgot/Harbor.git ~/Harbor
+cd ~/Harbor
 ./scripts/install-desktop.sh
 ```
 
-The script installs the included RPM using `dnf`. Harbor then appears in the application menu. The included RPM SHA-256 is:
+If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-1e24e038594d784f76cec76c3f14f9fa677f491bd64846c42674aae180fa6356
+39c62094f19061c851779abdf46df207a8491ef09c9c0b6a26ac0b2a99075ae9
 ```
 
 ## Step 4: pair
@@ -77,15 +100,25 @@ You can also use the same interface at `http://YOUR-UNRAID-IP:7331` in a browser
 
 ## Updating
 
-Replace/update the source files, then rerun:
+For a Git installation on Unraid:
 
 ```bash
+cd /mnt/user/appdata/harbor-source
+git pull --ff-only
 ./scripts/install-unraid.sh
 ```
 
 Accept the same answers. The installer preserves the generated qBittorrent password and Harbor pairing code, rebuilds Harbor, and leaves the persistent queue/configuration in appdata.
 
-On Nobara, rerun `./scripts/install-desktop.sh` after replacing the source or release RPM.
+For a Git installation on Nobara:
+
+```bash
+cd ~/Harbor
+git pull --ff-only
+./scripts/install-desktop.sh
+```
+
+Archive-based installs can be updated by downloading the current archive into a new source folder and rerunning the installer. Never overwrite or publish the generated `.env` file.
 
 ## Useful commands
 

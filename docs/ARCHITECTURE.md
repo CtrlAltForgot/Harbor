@@ -25,3 +25,5 @@ Pairing exchanges a short-lived/out-of-band code for a random 192-bit bearer tok
 The organizer copies to a uniquely named partial target, verifies the recursive byte count, and atomically renames it. The staging source is preserved. Low-confidence classification routes to review, and retention runs only after organization succeeds. Operation history is stored in the SQLite audit table.
 
 Movie/TV identification is layered: deterministic release-name and file rules establish content shape, then optional TMDB search confirms the canonical title and year. Only an unambiguous result is promoted to automatic organization. Tied, weak, or unavailable metadata results enter Needs Review, and local classification remains available offline.
+
+Before organizing television content, Harbor compares the canonical series title with existing library directories. A single exact or safe prefix/alias match reuses that folder, allowing later seasons to join an existing show. A season pack can merge missing episodes into an existing season only after a complete collision preflight; Harbor never replaces an existing episode.

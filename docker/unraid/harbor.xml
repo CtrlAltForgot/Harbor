@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>Harbor</Name><Repository>ghcr.io/example/harbor:latest</Repository><Registry>https://github.com/example/harbor</Registry>
-  <Network>bridge</Network><Shell>sh</Shell><Privileged>false</Privileged><Support>https://github.com/example/harbor/issues</Support>
+  <Name>Harbor</Name><Repository>ghcr.io/ctrlaltforgot/harbor:latest</Repository><Registry>https://github.com/CtrlAltForgot/Harbor</Registry>
+  <Network>bridge</Network><Shell>sh</Shell><Privileged>false</Privileged><Support>https://github.com/CtrlAltForgot/Harbor/issues</Support>
   <Overview>Harbor companion evaluation image. Securely control server-side downloads from Harbor Desktop.</Overview>
   <Category>Downloaders:</Category><WebUI>http://[IP]:[PORT:7331]</WebUI>
   <Config Name="API Port" Target="7331" Default="7331" Mode="tcp" Description="LAN API port" Type="Port" Display="always" Required="true" Mask="false">7331</Config>

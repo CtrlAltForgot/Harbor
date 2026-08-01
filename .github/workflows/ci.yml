@@ -1,0 +1,33 @@
+name: Verify Harbor
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Type-check shared code, companion, and UI
+        run: npm run typecheck -w @harbor/contracts -w @harbor/companion -w @harbor/ui
+      - name: Run automated tests
+        run: npm test
+      - name: Build companion and UI
+        run: npm run build -w @harbor/companion -w @harbor/ui
+      - name: Validate installers
+        run: bash -n scripts/install-unraid.sh scripts/install-desktop.sh
+      - name: Validate Docker Compose
+        env:
+          HARBOR_PAIRING_CODE: validation-only
+          QBITTORRENT_PASSWORD: validation-only
+        run: docker compose config --quiet
