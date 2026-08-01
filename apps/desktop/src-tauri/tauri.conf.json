@@ -10,6 +10,7 @@
     "frontendDist": "../../ui/dist"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "Harbor",
@@ -33,6 +34,6 @@
       "icons/128x128@2x.png",
       "icons/icon.png"
     ],
-    "linux": { "rpm": { "release": "2" } }
+    "linux": { "rpm": { "release": "3" } }
   }
 }

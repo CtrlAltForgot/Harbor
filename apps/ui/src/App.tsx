@@ -27,7 +27,6 @@ import {
 import { api, connection } from "./lib/api";
 import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
-import { PlanTimer } from "./components/PlanTimer";
 
 const fmtSpeed = (n: number) => (n ? `${(n / 1e6).toFixed(1)} MB/s` : "—");
 const fmtSize = (n: number) => (n < 0 ? "—" : `${(n / 1e9).toFixed(1)} GB`);
@@ -88,7 +87,6 @@ export function App() {
     return (
       <>
         <Pairing onPaired={() => setPaired(true)} />
-        <PlanTimer completed={2} />
       </>
     );
   return (
@@ -267,7 +265,6 @@ export function App() {
           }}
         />
       )}
-      <PlanTimer completed={4} />
     </div>
   );
 }

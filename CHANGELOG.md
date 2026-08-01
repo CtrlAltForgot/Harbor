@@ -3,6 +3,7 @@
 ## 0.1.0 — Unreleased
 
 - Fixed immediate desktop exits caused by WebKitGTK Wayland DMA-BUF protocol errors on Nobara; RPM release 2 enables the compatible renderer automatically.
+- Removed the accidental Build Plan development overlay and moved desktop API calls to native Rust networking to avoid WebKit LAN-request failures; RPM release 3 provides actionable pairing errors.
 - Added authenticated pairing, persistent queue, duplicate detection, mock transfer engine, local classification, live controls, responsive Harbor interface, and Docker foundation.
 - Added real qBittorrent 5.x integration, `.torrent` parsing, verified organization, storage preflight, review corrections, companion-hosted UI, and a buildable Nobara RPM.
 - Validated a genuine Creative Commons download and added primary video/subtitle normalization for directory-based movie and episode torrents.

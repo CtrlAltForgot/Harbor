@@ -25,10 +25,63 @@ export const connection = {
     localStorage.removeItem(KEY);
   },
 };
+interface TransportResponse {
+  status: number;
+  body: string;
+}
+declare global {
+  interface Window {
+    __TAURI__?: {
+      core: {
+        invoke<T>(command: string, args: Record<string, unknown>): Promise<T>;
+      };
+    };
+  }
+}
+async function transport(
+  url: string,
+  init: RequestInit = {},
+): Promise<TransportResponse> {
+  const method = init.method ?? "GET";
+  const headers = new Headers(init.headers);
+  try {
+    if (window.__TAURI__?.core)
+      return await window.__TAURI__.core.invoke<TransportResponse>(
+        "http_request",
+        {
+          method,
+          url,
+          body: typeof init.body === "string" ? init.body : null,
+          authorization: headers.get("authorization"),
+        },
+      );
+    const response = await fetch(url, init);
+    return { status: response.status, body: await response.text() };
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message !== "Load failed" &&
+      error.message !== "Failed to fetch"
+    )
+      throw error;
+    throw new Error(
+      "Harbor could not reach that address. Confirm the Unraid IP, port 7331, and that the Harbor container is running.",
+    );
+  }
+}
+function parseBody<T>(response: TransportResponse): T {
+  try {
+    return JSON.parse(response.body) as T;
+  } catch {
+    throw new Error(
+      `The server returned an unreadable response (${response.status})`,
+    );
+  }
+}
 async function request<T>(path: string, init: RequestInit = {}) {
   const saved = connection.get();
   if (!saved) throw new Error("Pair with your server first");
-  const response = await fetch(`${saved.baseUrl}${path}`, {
+  const response = await transport(`${saved.baseUrl}${path}`, {
     ...init,
     headers: {
       "content-type": "application/json",
@@ -36,22 +89,31 @@ async function request<T>(path: string, init: RequestInit = {}) {
       ...init.headers,
     },
   });
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
+  if (response.status < 200 || response.status >= 300) {
+    const body = parseBody<{ error?: string }>(response);
     throw new Error(body.error || `Request failed (${response.status})`);
   }
-  return response.status === 204 ? (undefined as T) : response.json();
+  return response.status === 204 ? (undefined as T) : parseBody<T>(response);
 }
 export const api = {
   async pair(baseUrl: string, code: string) {
     const clean = baseUrl.replace(/\/$/, "");
-    const response = await fetch(`${clean}/api/v1/pair`, {
+    if (!/^https?:\/\//i.test(clean))
+      throw new Error(
+        "Enter the full address beginning with http:// or https://",
+      );
+    const response = await transport(`${clean}/api/v1/pair`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ code, label: "Harbor Desktop" }),
     });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error || "Pairing failed");
+    const body = parseBody<{
+      token: string;
+      serverName: string;
+      error?: string;
+    }>(response);
+    if (response.status < 200 || response.status >= 300)
+      throw new Error(body.error || `Pairing failed (${response.status})`);
     connection.set({
       baseUrl: clean,
       token: body.token,
