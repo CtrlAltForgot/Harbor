@@ -1,0 +1,18 @@
+services:
+  harbor:
+    build: .
+    environment:
+      HARBOR_PAIRING_CODE: ${HARBOR_PAIRING_CODE:?Set HARBOR_PAIRING_CODE in .env}
+      HARBOR_ENGINE: mock
+    ports:
+      - "7331:7331"
+    volumes:
+      - harbor-config:/config
+      - ./dev-storage/incomplete:/downloads/incomplete
+      - ./dev-storage/complete:/downloads/complete
+      - ./dev-storage/media:/media
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+volumes:
+  harbor-config:

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Harbor",
+  "version": "0.1.0",
+  "identifier": "app.harbor.desktop",
+  "build": { "beforeDevCommand": "npm run dev -w @harbor/ui", "devUrl": "http://localhost:5173", "beforeBuildCommand": "npm run build -w @harbor/ui", "frontendDist": "../../ui/dist" },
+  "app": { "windows": [{ "title": "Harbor", "width": 1380, "height": 880, "minWidth": 1000, "minHeight": 680, "center": true }], "security": { "csp": "default-src 'self'; connect-src 'self' http://* ws://*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com" } },
+  "bundle": { "active": true, "targets": ["appimage", "rpm", "deb"], "icon": [] }
+}
