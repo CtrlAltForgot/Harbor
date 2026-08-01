@@ -1,5 +1,21 @@
 # Troubleshooting
 
+## Desktop flashes blank and immediately closes on Nobara
+
+Update to RPM release `0.1.0-2` or newer. Release 2 automatically uses WebKitGTK's compatible renderer on Wayland and fixes the observed `Error 71 (Protocol error) dispatching to Wayland display` crash.
+
+```bash
+cd ~/Harbor
+git pull --ff-only
+./scripts/install-desktop.sh
+```
+
+If it still closes, collect the relevant log without sharing credentials:
+
+```bash
+journalctl --user --since "10 minutes ago" --no-pager | grep -i harbor
+```
+
 - Pairing fails: confirm the server URL, port 7331, and exact `HARBOR_PAIRING_CODE`. Check the companion log without sharing credentials.
 - UI shows disconnected: open `/health` on the server from the desktop. Harbor retries automatically.
 - State disappeared: ensure `/config` is mapped persistently and writable by the configured UID/GID.

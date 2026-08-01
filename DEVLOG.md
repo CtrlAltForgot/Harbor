@@ -17,3 +17,5 @@ Aligned Harbor with an existing Jellyfin-style media share: Docker now mounts on
 Moved distribution to `github.com/CtrlAltForgot/Harbor`. Added source verification and container-publishing workflows, updated the Unraid template to the real repository/GHCR coordinates, added safe issue/security guidance, and changed fresh installation and updates to `git clone`/`git pull` with an archive fallback.
 
 Added library-aware television routing for incremental collections. Canonical titles can reuse one uniquely matching existing series folder (including a conservative longer-title prefix alias), new seasons land beside old seasons, and missing episodes can merge into an existing season only after a no-overwrite collision preflight and post-merge size verification.
+
+Reproduced the installed desktop's immediate exit on Nobara Wayland from the journal (`Error 71 (Protocol error) dispatching to Wayland display`). Verified that disabling WebKitGTK's DMA-BUF renderer keeps Harbor running, moved the compatibility setting into pre-WebKit Rust startup, and incremented the RPM package release so existing installations upgrade correctly.
