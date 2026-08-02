@@ -106,7 +106,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-2c003839b1b26905175c4f0c11b01a060981df5e3db15a4d4f04d2917bb695cd
+4a50426778b8b78b366c925257773eed93c05c40bfdd93a1cef5915e0fb7a307
 ```
 
 ## Step 4: pair

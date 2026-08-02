@@ -118,6 +118,12 @@ select {
   flex-direction: column;
   overflow: hidden;
 }
+.downloads-content > .topbar,
+.downloads-content > .summary,
+.downloads-content > .toolbar,
+.downloads-content > .offline-banner {
+  flex: 0 0 auto;
+}
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -322,7 +328,7 @@ select {
   border-radius: 16px;
   background: #10171a;
   overflow: auto;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 180px;
   scrollbar-color: #31434a transparent;
   scroll-snap-type: y proximity;
