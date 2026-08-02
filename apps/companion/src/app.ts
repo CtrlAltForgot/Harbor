@@ -494,8 +494,14 @@ export async function buildApp(overrides: Partial<Config> = {}) {
       return reply.code(400).send({ error: "Unsupported action" });
     if (qbit) {
       const commands = { reannounce: "reannounce", "queue-up": "increasePrio", "queue-down": "decreasePrio", "queue-top": "topPrio", "queue-bottom": "bottomPrio" } as const;
-      if (action in commands) await qbit.command(current.infoHash, commands[action as keyof typeof commands]);
-      else await qbit.action(current.infoHash, action === "retry" ? "resume" : (action as "pause" | "resume" | "recheck"));
+      try {
+        if (action in commands) await qbit.command(current.infoHash, commands[action as keyof typeof commands]);
+        else await qbit.action(current.infoHash, action === "retry" ? "resume" : (action as "pause" | "resume" | "recheck"));
+      } catch (error) {
+        return reply.code(502).send({
+          error: `${action.replaceAll("-", " ")} failed: ${error instanceof Error ? error.message : "qBittorrent rejected the action"}`,
+        });
+      }
     }
     const next: Torrent = {
       ...current,

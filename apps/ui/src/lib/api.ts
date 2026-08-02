@@ -86,7 +86,7 @@ async function request<T>(path: string, init: RequestInit = {}) {
   const response = await transport(`${saved.baseUrl}${path}`, {
     ...init,
     headers: {
-      "content-type": "application/json",
+      ...(init.body ? { "content-type": "application/json" } : {}),
       authorization: `Bearer ${saved.token}`,
       ...init.headers,
     },

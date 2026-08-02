@@ -45,12 +45,12 @@ async fn http_request(
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|error| error.to_string())?;
-    let mut request = client.request(method, parsed).header("content-type", "application/json");
+    let mut request = client.request(method, parsed);
     if let Some(value) = authorization {
         request = request.header("authorization", value);
     }
     if let Some(value) = body {
-        request = request.body(value);
+        request = request.header("content-type", "application/json").body(value);
     }
     let response = request.send().await.map_err(|error| {
         if error.is_connect() { "Harbor could not reach that server. Check the IP address, port, and container status.".into() }
@@ -143,6 +143,29 @@ mod tests {
     fn native_transport_rejects_non_http_addresses() {
         let error = tauri::async_runtime::block_on(http_request("GET".into(), "file:///etc/passwd".into(), None, None)).unwrap_err();
         assert!(error.contains("http:// or https://"));
+    }
+
+    #[test]
+    fn bodyless_post_does_not_claim_to_contain_json() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0_u8; 2048];
+            let read = stream.read(&mut request).unwrap();
+            stream.write_all(b"HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n").unwrap();
+            String::from_utf8_lossy(&request[..read]).into_owned()
+        });
+        let response = tauri::async_runtime::block_on(http_request(
+            "POST".into(),
+            format!("http://{address}/api/v1/torrents/example/reannounce"),
+            None,
+            Some("Bearer test".into()),
+        )).unwrap();
+        let received = server.join().unwrap().to_ascii_lowercase();
+        assert_eq!(response.status, 204);
+        assert!(!received.contains("content-type"));
+        assert!(received.contains("authorization: bearer test"));
     }
 
     #[test]
