@@ -1,6 +1,7 @@
 import type {
   AddTorrentRequest,
   HarborSettings,
+  QbitPreferences,
   ServerStatus,
   Torrent,
 } from "@harbor/contracts";
@@ -136,6 +137,13 @@ export const api = {
     tmdbAccessToken?: string;
   }) =>
     request<HarborSettings>("/api/v1/settings", {
+      method: "PUT",
+      body: JSON.stringify(input),
+    }),
+  enginePreferences: () =>
+    request<QbitPreferences>("/api/v1/engine/preferences"),
+  saveEnginePreferences: (input: QbitPreferences) =>
+    request<QbitPreferences>("/api/v1/engine/preferences", {
       method: "PUT",
       body: JSON.stringify(input),
     }),

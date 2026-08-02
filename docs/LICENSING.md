@@ -7,3 +7,5 @@ qBittorrent is GPL-2.0-or-later. Its source may be studied, modified, and redist
 libtorrent-rasterbar is BSD-3-Clause and permits modification, redistribution, and binary bundling with copyright/license/disclaimer preservation. It offers tighter embedding but increases native build, lifecycle, and protocol-state responsibility. Transmission is GPL-2.0-or-later and also offers RPC. qBittorrent was selected because it is mature, familiar to the target user, exposes the needed controls, persists session state, and is well supported in containers.
 
 Exact dependency versions and license notices will be generated into the release SBOM before distribution. This is an engineering summary, not legal advice.
+
+The desktop uses Tauri and its official notification and JavaScript API packages under their MIT/Apache-2.0 licensing. React and Lucide are MIT licensed. These dependencies permit bundling and redistribution with their notices preserved.

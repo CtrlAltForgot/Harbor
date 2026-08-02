@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Added close-to-tray behavior, native completion/organization/review notifications, native drag-and-drop `.torrent` intake, a desktop-independence explanation, fully dark settings selectors, and a functional category-tree editor for practical qBittorrent download, connection, speed, queueing, and privacy settings.
 - Forced WebKit's native sort selector into Harbor's dark color scheme so the selected value and menu options remain readable on Nobara.
 - Removed torrent archiving: manual removal now deletes the Harbor record, permits the same info hash to be added again, and migration 2 purges all legacy archived records automatically.
 - Stopped live synchronization from reordering torrent rows, added a persistent sort control, and made creation time the stable default ordering in both the API and desktop.

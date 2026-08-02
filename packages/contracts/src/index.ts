@@ -87,6 +87,34 @@ export interface HarborSettings {
   tmdbConfigured: boolean;
   metadataLanguage: string;
 }
+export interface QbitPreferences {
+  savePath: string;
+  tempPath: string;
+  tempPathEnabled: boolean;
+  createSubfolder: boolean;
+  preallocateAll: boolean;
+  incompleteExtension: boolean;
+  startPaused: boolean;
+  listenPort: number;
+  upnp: boolean;
+  maxConnections: number;
+  maxConnectionsPerTorrent: number;
+  maxUploadsPerTorrent: number;
+  downloadLimit: number;
+  uploadLimit: number;
+  alternativeDownloadLimit: number;
+  alternativeUploadLimit: number;
+  queueingEnabled: boolean;
+  maxActiveDownloads: number;
+  maxActiveUploads: number;
+  maxActiveTorrents: number;
+  dontCountSlowTorrents: boolean;
+  dht: boolean;
+  pex: boolean;
+  lsd: boolean;
+  encryption: number;
+  anonymousMode: boolean;
+}
 export interface AddTorrentRequest {
   magnet?: string;
   torrentBase64?: string;

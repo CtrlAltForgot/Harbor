@@ -11,6 +11,8 @@ export class QbitClient {
   async addMagnet(magnet:string, _category:string, expectedHash?:string){const form=new FormData();form.set("urls",magnet);form.set("savepath",this.config.incompleteDir);await this.expectAccepted("/api/v2/torrents/add",form);if(expectedHash)await this.waitUntilPresent(expectedHash);}
   async addFile(data:Buffer,fileName:string,_category:string,expectedHash?:string){const form=new FormData();form.set("torrents",new Blob([new Uint8Array(data)]),fileName);form.set("savepath",this.config.incompleteDir);await this.expectAccepted("/api/v2/torrents/add",form);if(expectedHash)await this.waitUntilPresent(expectedHash);}
   async list(){return this.callJson<QbitTorrent[]>("/api/v2/torrents/info");}
+  async preferences(){return this.callJson<Record<string,unknown>>("/api/v2/app/preferences");}
+  async setPreferences(values:Record<string,unknown>){await this.post("/api/v2/app/setPreferences",{json:JSON.stringify(values)});}
   async files(hash:string){return this.callJson<QbitFile[]>(`/api/v2/torrents/files?hash=${encodeURIComponent(hash)}`);}
   async action(hash:string,action:"pause"|"resume"|"recheck"){
     const modern=action==="pause"?"stop":action==="resume"?"start":"recheck";

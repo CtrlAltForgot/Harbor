@@ -14,15 +14,17 @@ import { extractMagnets } from "../lib/magnets";
 export function AddTorrent({
   close,
   added,
+  initialFile,
 }: {
   close: () => void;
   added: () => void;
+  initialFile?: { name: string; base64: string } | null;
 }) {
   const [magnet, setMagnet] = useState("");
   const [torrentFile, setTorrentFile] = useState<{
     name: string;
     base64: string;
-  } | null>(null);
+  } | null>(initialFile ?? null);
   const [category, setCategory] = useState<Category>("auto"),
     [retention, setRetention] = useState<RetentionPolicy>("remove");
   const [error, setError] = useState(""),

@@ -87,6 +87,12 @@ For television, separate downloads are consolidated as `TV Shows/Show Name/Seaso
 
 The downloads list defaults to **Newest added**, which is stable: progress and status refreshes never move existing rows. The sort selector also supports oldest added, name, progress, and status, and remembers the chosen order on that desktop.
 
+You can drag one `.torrent` file anywhere over the Harbor Desktop window. Harbor validates the file, opens the normal Add Torrent confirmation sheet, and does not start it until you confirm the category and cleanup policy.
+
+Closing Harbor Desktop hides it in the system tray by default. Use **Open Harbor** or **Quit Harbor** from the tray menu. With desktop notifications enabled in Settings, Harbor notifies on organization or Needs Review transitions while it is running in the tray. The desktop is only a remote control: downloads, identification, and organization continue on Unraid even when the desktop application is fully quit.
+
+The **qBittorrent settings** area uses a category list on the left and live engine settings on the right. Download behavior, connection port/limits, global and alternative speeds, queueing, DHT/PeX/LSD, encryption, and anonymous mode are written to qBittorrent and read back before Harbor reports success. Container download paths are intentionally read-only because changing them outside Harbor could bypass organization and deletion safeguards.
+
 ## Step 3: install Harbor Desktop on Nobara
 
 Open a terminal on the Nobara PC. Download Harbor and run the desktop installer:
@@ -100,7 +106,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-377d47a24efa2ac8318637257a3526c8663efbd5c93a0f3ab08a5a2b8575a0fa
+b8a874ef61a81200230e75d56c13a1554513047ad94c02fc54380518d3b6392e
 ```
 
 ## Step 4: pair

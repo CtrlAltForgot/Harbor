@@ -21,6 +21,8 @@ describe("qBittorrent adapter", () => {
         if (url.endsWith("/torrents/stop")) state = "stoppedDL";
         if (url.endsWith("/torrents/start")) state = "downloading";
         if (url.endsWith("/torrents/delete")) present = false;
+        if (url.endsWith("/app/preferences"))
+          return Response.json({ dl_limit: 1024, queueing_enabled: true });
         if (url.includes("/torrents/info"))
           return Response.json(
             present
@@ -66,6 +68,12 @@ describe("qBittorrent adapter", () => {
     expect(await client.list()).toHaveLength(0);
     const remove = calls.find((call) => call.url.endsWith("/torrents/delete"))!;
     expect(String(remove.init.body)).toContain("deleteFiles=true");
+    expect(await client.preferences()).toMatchObject({ dl_limit: 1024 });
+    await client.setPreferences({ dl_limit: 2048, dht: false });
+    const preferences = calls.find((call) =>
+      call.url.endsWith("/app/setPreferences"),
+    )!;
+    expect(String(preferences.init.body)).toContain("dl_limit%22%3A2048");
     expect(calls.filter((call) => call.url.endsWith("/auth/login"))).toHaveLength(1);
     expect(
       calls.slice(1).every(

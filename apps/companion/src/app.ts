@@ -7,6 +7,7 @@ import type {
   AddTorrentRequest,
   EventMessage,
   HarborSettings,
+  QbitPreferences,
   Torrent,
 } from "@harbor/contracts";
 import { loadConfig, type Config } from "./config.js";
@@ -45,6 +46,35 @@ const addSchema = z
     (v) => !!v.magnet !== !!v.torrentBase64,
     "Provide exactly one torrent source",
   );
+
+const qbitPreferencesSchema = z.object({
+  savePath: z.string(),
+  tempPath: z.string(),
+  tempPathEnabled: z.boolean(),
+  createSubfolder: z.boolean(),
+  preallocateAll: z.boolean(),
+  incompleteExtension: z.boolean(),
+  startPaused: z.boolean(),
+  listenPort: z.number().int().min(1).max(65535),
+  upnp: z.boolean(),
+  maxConnections: z.number().int().min(-1).max(1_000_000),
+  maxConnectionsPerTorrent: z.number().int().min(-1).max(1_000_000),
+  maxUploadsPerTorrent: z.number().int().min(-1).max(1_000_000),
+  downloadLimit: z.number().int().min(0),
+  uploadLimit: z.number().int().min(0),
+  alternativeDownloadLimit: z.number().int().min(0),
+  alternativeUploadLimit: z.number().int().min(0),
+  queueingEnabled: z.boolean(),
+  maxActiveDownloads: z.number().int().min(-1).max(100_000),
+  maxActiveUploads: z.number().int().min(-1).max(100_000),
+  maxActiveTorrents: z.number().int().min(-1).max(100_000),
+  dontCountSlowTorrents: z.boolean(),
+  dht: z.boolean(),
+  pex: z.boolean(),
+  lsd: z.boolean(),
+  encryption: z.number().int().min(0).max(2),
+  anonymousMode: z.boolean(),
+});
 
 export async function buildApp(overrides: Partial<Config> = {}) {
   const config = loadConfig(overrides);
@@ -154,6 +184,26 @@ export async function buildApp(overrides: Partial<Config> = {}) {
     };
   });
   app.get("/api/v1/torrents", async () => store.list());
+  app.get("/api/v1/engine/preferences", async (request, reply) => {
+    if (!qbit)
+      return reply.code(400).send({ error: "qBittorrent is not configured" });
+    return mapQbitPreferences(await qbit.preferences());
+  });
+  app.put("/api/v1/engine/preferences", async (request, reply) => {
+    if (!qbit)
+      return reply.code(400).send({ error: "qBittorrent is not configured" });
+    const parsed = qbitPreferencesSchema.safeParse(request.body);
+    if (!parsed.success)
+      return reply.code(400).send({ error: "Invalid qBittorrent settings" });
+    await qbit.setPreferences(toQbitPreferences(parsed.data));
+    const confirmed = mapQbitPreferences(await qbit.preferences());
+    store.audit("engine.preferences_updated", null, {
+      ...parsed.data,
+      savePath: undefined,
+      tempPath: undefined,
+    });
+    return confirmed;
+  });
   app.get("/api/v1/settings", async (): Promise<HarborSettings> => ({
     mediaRoot,
     mediaHostRoot: config.mediaHostRoot,
@@ -732,4 +782,70 @@ function hostMediaPath(config: Config, containerPath: string) {
         path.relative(config.mediaRoot, containerPath),
       )
     : undefined;
+}
+
+function mapQbitPreferences(values: Record<string, unknown>): QbitPreferences {
+  const text = (key: string) => String(values[key] ?? ""),
+    bool = (key: string) => Boolean(values[key]),
+    number = (key: string, fallback = 0) => {
+      const value = Number(values[key]);
+      return Number.isFinite(value) ? value : fallback;
+    };
+  return {
+    savePath: text("save_path"),
+    tempPath: text("temp_path"),
+    tempPathEnabled: bool("temp_path_enabled"),
+    createSubfolder: bool("create_subfolder_enabled"),
+    preallocateAll: bool("preallocate_all"),
+    incompleteExtension: bool("incomplete_files_ext"),
+    startPaused: bool("start_paused_enabled"),
+    listenPort: number("listen_port", 6881),
+    upnp: bool("upnp"),
+    maxConnections: number("max_connec", 500),
+    maxConnectionsPerTorrent: number("max_connec_per_torrent", 100),
+    maxUploadsPerTorrent: number("max_uploads_per_torrent", 20),
+    downloadLimit: number("dl_limit"),
+    uploadLimit: number("up_limit"),
+    alternativeDownloadLimit: number("alt_dl_limit"),
+    alternativeUploadLimit: number("alt_up_limit"),
+    queueingEnabled: bool("queueing_enabled"),
+    maxActiveDownloads: number("max_active_downloads", 3),
+    maxActiveUploads: number("max_active_uploads", 3),
+    maxActiveTorrents: number("max_active_torrents", 5),
+    dontCountSlowTorrents: bool("dont_count_slow_torrents"),
+    dht: bool("dht"),
+    pex: bool("pex"),
+    lsd: bool("lsd"),
+    encryption: number("encryption"),
+    anonymousMode: bool("anonymous_mode"),
+  };
+}
+
+function toQbitPreferences(values: z.infer<typeof qbitPreferencesSchema>) {
+  return {
+    temp_path_enabled: values.tempPathEnabled,
+    create_subfolder_enabled: values.createSubfolder,
+    preallocate_all: values.preallocateAll,
+    incomplete_files_ext: values.incompleteExtension,
+    start_paused_enabled: values.startPaused,
+    listen_port: values.listenPort,
+    upnp: values.upnp,
+    max_connec: values.maxConnections,
+    max_connec_per_torrent: values.maxConnectionsPerTorrent,
+    max_uploads_per_torrent: values.maxUploadsPerTorrent,
+    dl_limit: values.downloadLimit,
+    up_limit: values.uploadLimit,
+    alt_dl_limit: values.alternativeDownloadLimit,
+    alt_up_limit: values.alternativeUploadLimit,
+    queueing_enabled: values.queueingEnabled,
+    max_active_downloads: values.maxActiveDownloads,
+    max_active_uploads: values.maxActiveUploads,
+    max_active_torrents: values.maxActiveTorrents,
+    dont_count_slow_torrents: values.dontCountSlowTorrents,
+    dht: values.dht,
+    pex: values.pex,
+    lsd: values.lsd,
+    encryption: values.encryption,
+    anonymous_mode: values.anonymousMode,
+  };
 }

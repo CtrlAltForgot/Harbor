@@ -5,6 +5,28 @@ struct HttpResponse {
     body: String,
 }
 
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DroppedTorrent {
+    name: String,
+    bytes: Vec<u8>,
+}
+
+#[tauri::command]
+fn read_torrent_file(path: String) -> Result<DroppedTorrent, String> {
+    let path = std::path::PathBuf::from(path);
+    if path.extension().and_then(|value| value.to_str()).map(|value| value.eq_ignore_ascii_case("torrent")) != Some(true) {
+        return Err("Drop a .torrent file into Harbor".into());
+    }
+    let metadata = std::fs::metadata(&path).map_err(|_| "The dropped torrent file could not be read")?;
+    if !metadata.is_file() || metadata.len() > 10 * 1024 * 1024 {
+        return Err("Torrent files must be regular files smaller than 10 MB".into());
+    }
+    let name = path.file_name().and_then(|value| value.to_str()).ok_or("The torrent filename is invalid")?.to_string();
+    let bytes = std::fs::read(path).map_err(|_| "The dropped torrent file could not be read")?;
+    Ok(DroppedTorrent { name, bytes })
+}
+
 #[tauri::command]
 async fn http_request(
     method: String,
@@ -50,14 +72,49 @@ pub fn run() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![http_request])
+        .plugin(tauri_plugin_notification::init())
+        .setup(|app| {
+            use tauri::{
+                menu::{Menu, MenuItem},
+                tray::TrayIconBuilder,
+                Manager,
+            };
+            let open = MenuItem::with_id(app, "open", "Open Harbor", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit Harbor", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&open, &quit])?;
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().expect("Harbor icon").clone())
+                .tooltip("Harbor — downloads continue on Unraid")
+                .menu(&menu)
+                .show_menu_on_left_click(true)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "open" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.unminimize();
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "quit" => app.exit(0),
+                    _ => {}
+                })
+                .build(app)?;
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
+        .invoke_handler(tauri::generate_handler![http_request, read_torrent_file])
         .run(tauri::generate_context!())
         .expect("error while running Harbor");
 }
 
 #[cfg(test)]
 mod tests {
-    use super::http_request;
+    use super::{http_request, read_torrent_file};
     use std::io::{Read, Write};
     use std::net::TcpListener;
 
@@ -86,5 +143,16 @@ mod tests {
     fn native_transport_rejects_non_http_addresses() {
         let error = tauri::async_runtime::block_on(http_request("GET".into(), "file:///etc/passwd".into(), None, None)).unwrap_err();
         assert!(error.contains("http:// or https://"));
+    }
+
+    #[test]
+    fn dropped_torrent_reader_accepts_only_small_torrent_files() {
+        let path = std::env::temp_dir().join(format!("harbor-{}.torrent", std::process::id()));
+        std::fs::write(&path, b"d4:infod4:name4:testee").unwrap();
+        let dropped = read_torrent_file(path.to_string_lossy().into_owned()).unwrap();
+        assert!(dropped.name.ends_with(".torrent"));
+        assert!(!dropped.bytes.is_empty());
+        let _ = std::fs::remove_file(path);
+        assert!(read_torrent_file("/tmp/not-a-torrent.txt".into()).is_err());
     }
 }

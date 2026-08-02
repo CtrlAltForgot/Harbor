@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Category,
   HarborSettings,
+  QbitPreferences,
   ServerStatus,
   Torrent,
 } from "@harbor/contracts";
@@ -13,13 +14,17 @@ import {
   Download,
   FolderCheck,
   KeyRound,
+  Gauge,
+  ListOrdered,
   LogOut,
   MoreHorizontal,
+  Network,
   Pause,
   Play,
   Plus,
   Search,
   Settings,
+  ShieldCheck,
   Upload,
   Wifi,
   X,
@@ -28,6 +33,12 @@ import { api, connection } from "./lib/api";
 import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
 import { sortTorrents, type TorrentSort } from "./lib/sort";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 
 const fmtSpeed = (n: number) => (n ? `${(n / 1e6).toFixed(1)} MB/s` : "—");
 const fmtSize = (n: number) => (n < 0 ? "—" : `${(n / 1e9).toFixed(1)} GB`);
@@ -51,10 +62,40 @@ export function App() {
       return (saved as TorrentSort) || "added-desc";
     }),
     [view, setView] = useState<"downloads" | "settings">("downloads"),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [dropActive, setDropActive] = useState(false),
+    [dropError, setDropError] = useState(""),
+    [droppedFile, setDroppedFile] = useState<{
+      name: string;
+      base64: string;
+    } | null>(null);
+  const previousItems = useRef<Map<string, Torrent>>(new Map()),
+    hasSnapshot = useRef(false);
   async function refresh() {
     try {
       const [t, s] = await Promise.all([api.list(), api.status()]);
+      if (hasSnapshot.current)
+        for (const torrent of t) {
+          const previous = previousItems.current.get(torrent.id);
+          if (!previous || previous.status === torrent.status) continue;
+          if (torrent.status === "organized")
+            void desktopNotification(
+              "Torrent organized",
+              `${torrent.name} was moved to ${torrent.organizedHostPath ?? torrent.organizedPath ?? torrent.destination}`,
+            );
+          else if (torrent.status === "review")
+            void desktopNotification(
+              "Torrent needs review",
+              `${torrent.name} finished downloading but needs classification attention.`,
+            );
+          else if (torrent.status === "completed")
+            void desktopNotification(
+              "Torrent download complete",
+              `${torrent.name} finished downloading and Harbor is processing it.`,
+            );
+        }
+      previousItems.current = new Map(t.map((torrent) => [torrent.id, torrent]));
+      hasSnapshot.current = true;
       setItems(t);
       setStatus(s);
       setError(
@@ -74,6 +115,47 @@ export function App() {
     const id = setInterval(refresh, 1200);
     return () => clearInterval(id);
   }, [paired]);
+  useEffect(() => {
+    if (!window.__TAURI__) return;
+    let unlisten: (() => void) | undefined;
+    getCurrentWebview()
+      .onDragDropEvent(async (event) => {
+        if (
+          event.payload.type === "enter" ||
+          event.payload.type === "over"
+        ) {
+          setDropActive(true);
+          return;
+        }
+        if (event.payload.type === "leave") {
+          setDropActive(false);
+          return;
+        }
+        if (event.payload.type !== "drop") return;
+        setDropActive(false);
+        try {
+          if (event.payload.paths.length !== 1)
+            throw new Error("Drop one .torrent file at a time");
+          const dropped = await window.__TAURI__!.core.invoke<{
+            name: string;
+            bytes: number[];
+          }>("read_torrent_file", { path: event.payload.paths[0] });
+          setDroppedFile({
+            name: dropped.name,
+            base64: bytesToBase64(dropped.bytes),
+          });
+          setDropError("");
+          setAdding(true);
+        } catch (error) {
+          setDropError(
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      })
+      .then((stop) => (unlisten = stop))
+      .catch(() => {});
+    return () => unlisten?.();
+  }, []);
   const visible = useMemo(
     () =>
       sortTorrents(
@@ -269,7 +351,28 @@ export function App() {
           </>
         )}
       </main>
-      {adding && <AddTorrent close={() => setAdding(false)} added={refresh} />}{" "}
+      {dropActive && (
+        <div className="drop-overlay">
+          <Download />
+          <strong>Drop .torrent file to add it</strong>
+          <span>You will confirm its destination before Harbor starts it.</span>
+        </div>
+      )}
+      {dropError && (
+        <button className="drop-error" onClick={() => setDropError("")}>
+          <AlertTriangle /> {dropError}
+        </button>
+      )}
+      {adding && (
+        <AddTorrent
+          initialFile={droppedFile}
+          close={() => {
+            setAdding(false);
+            setDroppedFile(null);
+          }}
+          added={refresh}
+        />
+      )}{" "}
       {reviewing && (
         <Review
           torrent={reviewing}
@@ -282,6 +385,29 @@ export function App() {
       )}
     </div>
   );
+}
+
+function bytesToBase64(bytes: number[]) {
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 8192)
+    binary += String.fromCharCode(...bytes.slice(offset, offset + 8192));
+  return btoa(binary);
+}
+
+async function desktopNotification(title: string, body: string) {
+  if (
+    !window.__TAURI__ ||
+    localStorage.getItem("harbor.notifications") === "false"
+  )
+    return;
+  try {
+    let allowed = await isPermissionGranted();
+    if (!allowed) allowed = (await requestPermission()) === "granted";
+    if (allowed) sendNotification({ title, body });
+  } catch {
+    // Transfer monitoring must continue if the desktop notification service is
+    // unavailable or permission is denied.
+  }
 }
 function TorrentRow({
   torrent: t,
@@ -634,6 +760,8 @@ function SettingsPage({ connectionError }: { connectionError: string }) {
       </header>
       <div className="settings-page">
         <ConnectionSettings connectionError={connectionError} />
+        <DesktopBehavior />
+        <EngineSettings />
         {!settings && (
           <div className="settings-loading">
             {error || "Loading server folders…"}
@@ -818,6 +946,202 @@ function ConnectionSettings({ connectionError }: { connectionError: string }) {
       </div>
     </section>
   );
+}
+
+function DesktopBehavior() {
+  const [notifications, setNotifications] = useState(
+    localStorage.getItem("harbor.notifications") !== "false",
+  );
+  return (
+    <section className="settings-section desktop-behavior">
+      <div>
+        <h2>Desktop behavior</h2>
+        <p>
+          Harbor Desktop is a remote control. Downloads, classification, and
+          organization run on Unraid, so the desktop app does not need to be
+          open. Only the Harbor server and qBittorrent containers need to stay
+          running.
+        </p>
+      </div>
+      <div className="settings-form">
+        <div className="behavior-note">
+          <Download />
+          <span>
+            <strong>Closing Harbor minimizes it to the system tray</strong>
+            <small>
+              Use the tray menu to reopen Harbor or choose Quit Harbor to stop
+              the desktop controller completely.
+            </small>
+          </span>
+        </div>
+        <label className="notification-choice">
+          <input
+            type="checkbox"
+            checked={notifications}
+            onChange={(event) => {
+              setNotifications(event.target.checked);
+              localStorage.setItem(
+                "harbor.notifications",
+                String(event.target.checked),
+              );
+            }}
+          />
+          <span>
+            <strong>Desktop notifications</strong>
+            <small>
+              Notify when a torrent is organized or needs classification
+              attention while Harbor is running in the tray.
+            </small>
+          </span>
+        </label>
+      </div>
+    </section>
+  );
+}
+
+type EngineSection =
+  | "downloads"
+  | "connection"
+  | "speed"
+  | "queueing"
+  | "bittorrent";
+
+function EngineSettings() {
+  const [preferences, setPreferences] = useState<QbitPreferences | null>(null),
+    [section, setSection] = useState<EngineSection>("downloads"),
+    [notice, setNotice] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  useEffect(() => {
+    api.enginePreferences().then(setPreferences).catch((error) =>
+      setError(
+        error instanceof Error
+          ? error.message
+          : "qBittorrent settings could not be loaded",
+      ),
+    );
+  }, []);
+  async function save() {
+    if (!preferences) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      setPreferences(await api.saveEnginePreferences(preferences));
+      setNotice("qBittorrent confirmed these settings.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Settings were rejected");
+    } finally {
+      setBusy(false);
+    }
+  }
+  const update = <K extends keyof QbitPreferences>(
+    key: K,
+    value: QbitPreferences[K],
+  ) => preferences && setPreferences({ ...preferences, [key]: value });
+  const sections: Array<[EngineSection, string, typeof Download]> = [
+    ["downloads", "Downloads", Download],
+    ["connection", "Connection", Network],
+    ["speed", "Speed", Gauge],
+    ["queueing", "Queueing", ListOrdered],
+    ["bittorrent", "BitTorrent", ShieldCheck],
+  ];
+  return (
+    <section className="engine-settings">
+      <header>
+        <div>
+          <p className="eyebrow">TORRENT ENGINE</p>
+          <h2>qBittorrent settings</h2>
+          <p>
+            Harbor writes these settings directly to the dedicated Unraid
+            qBittorrent service and reads them back for confirmation.
+          </p>
+        </div>
+        <button className="primary" disabled={!preferences || busy} onClick={save}>
+          <CheckCircle2 /> {busy ? "Saving…" : "Save qBittorrent settings"}
+        </button>
+      </header>
+      <div className="engine-settings-body">
+        <nav aria-label="qBittorrent settings categories">
+          {sections.map(([id, label, Icon]) => (
+            <button
+              key={id}
+              className={section === id ? "active" : ""}
+              onClick={() => setSection(id)}
+            >
+              <Icon /> {label}
+            </button>
+          ))}
+        </nav>
+        <div className="engine-settings-panel">
+          {!preferences ? (
+            <div className="settings-loading">{error || "Loading qBittorrent settings…"}</div>
+          ) : section === "downloads" ? (
+            <>
+              <h3>Downloads</h3>
+              <ReadOnlySetting label="Harbor download path" value={preferences.savePath} />
+              <ReadOnlySetting label="Incomplete path" value={preferences.tempPath} />
+              <BooleanSetting label="Use incomplete-download folder" value={preferences.tempPathEnabled} onChange={(value) => update("tempPathEnabled", value)} />
+              <BooleanSetting label="Create a subfolder for multi-file torrents" value={preferences.createSubfolder} onChange={(value) => update("createSubfolder", value)} />
+              <BooleanSetting label="Pre-allocate disk space" value={preferences.preallocateAll} onChange={(value) => update("preallocateAll", value)} />
+              <BooleanSetting label="Append .!qB to incomplete files" value={preferences.incompleteExtension} onChange={(value) => update("incompleteExtension", value)} />
+              <BooleanSetting label="Add new torrents paused" value={preferences.startPaused} onChange={(value) => update("startPaused", value)} />
+            </>
+          ) : section === "connection" ? (
+            <>
+              <h3>Connection</h3>
+              <NumberSetting label="Incoming connections port" value={preferences.listenPort} min={1} max={65535} onChange={(value) => update("listenPort", value)} />
+              <BooleanSetting label="Use UPnP / NAT-PMP port forwarding" value={preferences.upnp} onChange={(value) => update("upnp", value)} />
+              <NumberSetting label="Global maximum connections (-1 unlimited)" value={preferences.maxConnections} min={-1} onChange={(value) => update("maxConnections", value)} />
+              <NumberSetting label="Maximum connections per torrent" value={preferences.maxConnectionsPerTorrent} min={-1} onChange={(value) => update("maxConnectionsPerTorrent", value)} />
+              <NumberSetting label="Upload slots per torrent" value={preferences.maxUploadsPerTorrent} min={-1} onChange={(value) => update("maxUploadsPerTorrent", value)} />
+            </>
+          ) : section === "speed" ? (
+            <>
+              <h3>Speed limits</h3>
+              <SpeedSetting label="Global download limit" value={preferences.downloadLimit} onChange={(value) => update("downloadLimit", value)} />
+              <SpeedSetting label="Global upload limit" value={preferences.uploadLimit} onChange={(value) => update("uploadLimit", value)} />
+              <SpeedSetting label="Alternative download limit" value={preferences.alternativeDownloadLimit} onChange={(value) => update("alternativeDownloadLimit", value)} />
+              <SpeedSetting label="Alternative upload limit" value={preferences.alternativeUploadLimit} onChange={(value) => update("alternativeUploadLimit", value)} />
+            </>
+          ) : section === "queueing" ? (
+            <>
+              <h3>Queueing</h3>
+              <BooleanSetting label="Enable torrent queueing" value={preferences.queueingEnabled} onChange={(value) => update("queueingEnabled", value)} />
+              <NumberSetting label="Maximum active downloads" value={preferences.maxActiveDownloads} min={-1} onChange={(value) => update("maxActiveDownloads", value)} />
+              <NumberSetting label="Maximum active uploads" value={preferences.maxActiveUploads} min={-1} onChange={(value) => update("maxActiveUploads", value)} />
+              <NumberSetting label="Maximum active torrents" value={preferences.maxActiveTorrents} min={-1} onChange={(value) => update("maxActiveTorrents", value)} />
+              <BooleanSetting label="Do not count slow torrents" value={preferences.dontCountSlowTorrents} onChange={(value) => update("dontCountSlowTorrents", value)} />
+            </>
+          ) : (
+            <>
+              <h3>BitTorrent privacy and discovery</h3>
+              <BooleanSetting label="Enable DHT" value={preferences.dht} onChange={(value) => update("dht", value)} />
+              <BooleanSetting label="Enable Peer Exchange (PeX)" value={preferences.pex} onChange={(value) => update("pex", value)} />
+              <BooleanSetting label="Enable Local Peer Discovery" value={preferences.lsd} onChange={(value) => update("lsd", value)} />
+              <label className="engine-field">Encryption mode<select value={preferences.encryption} onChange={(event) => update("encryption", Number(event.target.value))}><option value={0}>Prefer encryption</option><option value={1}>Require encryption</option><option value={2}>Allow unencrypted only</option></select></label>
+              <BooleanSetting label="Anonymous mode" value={preferences.anonymousMode} onChange={(value) => update("anonymousMode", value)} />
+            </>
+          )}
+          {notice && <div className="settings-success"><CheckCircle2 /> {notice}</div>}
+          {preferences && error && <div className="error"><AlertTriangle /> {error}</div>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BooleanSetting({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) {
+  return <label className="engine-toggle"><span>{label}</span><input type="checkbox" checked={value} onChange={(event) => onChange(event.target.checked)} /></label>;
+}
+function NumberSetting({ label, value, min = 0, max, onChange }: { label: string; value: number; min?: number; max?: number; onChange: (value: number) => void }) {
+  return <label className="engine-field">{label}<input type="number" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
+}
+function SpeedSetting({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  return <label className="engine-field">{label}<div className="unit-input"><input type="number" min={0} value={Math.round(value / 1024)} onChange={(event) => onChange(Number(event.target.value) * 1024)} /><span>KiB/s</span></div><small>0 means unlimited.</small></label>;
+}
+function ReadOnlySetting({ label, value }: { label: string; value: string }) {
+  return <label className="engine-field">{label}<input value={value} readOnly /><small>Managed by Harbor's Docker storage mapping for safety.</small></label>;
 }
 function PathField({
   label,
