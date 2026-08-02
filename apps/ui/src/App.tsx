@@ -38,6 +38,7 @@ import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
 import { sortTorrents, type TorrentSort } from "./lib/sort";
 import { floatingMenuPosition, nearestRowScroll } from "./lib/layout";
+import { isSortingStatus, torrentMatchesFilter, type TorrentFilter } from "./lib/filter";
 import { formatEta, formatSpeed, overallDownloadEta, transferCounts } from "./lib/format";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
@@ -187,13 +188,7 @@ export function App() {
       sortTorrents(
         items.filter(
           (t) =>
-            (filter === "all" ||
-              (filter === "active" &&
-                ["queued", "downloading"].includes(t.status)) ||
-              (filter === "sorting" && t.status === "processing") ||
-              (filter === "review" && t.status === "review") ||
-              (filter === "complete" &&
-              ["organized", "completed"].includes(t.status))) &&
+            torrentMatchesFilter(filter as TorrentFilter, t.status) &&
             t.name.toLowerCase().includes(query.toLowerCase()),
         ),
         sort,
@@ -458,8 +453,9 @@ function TorrentRow({
     [downloadLimit, setDownloadLimit] = useState(0),
     [uploadLimit, setUploadLimit] = useState(0),
     [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, maxHeight: 0 });
-  const sorting = t.status === "processing",
-    shownProgress = sorting ? (t.organization?.progress ?? 0) : t.progress;
+  const sorting = isSortingStatus(t.status),
+    activelySorting = t.status === "processing",
+    shownProgress = activelySorting ? (t.organization?.progress ?? 0) : t.progress;
   const actionButton = useRef<HTMLButtonElement>(null);
   function positionActionMenu() {
     const anchor = actionButton.current;
@@ -524,7 +520,7 @@ function TorrentRow({
           <p>
             <b>{Math.round(shownProgress * 100)}%</b>
             <span>
-              {sorting && t.organization
+              {activelySorting && t.organization
                 ? `${fmtSize(t.organization.bytesProcessed)} of ${fmtSize(t.organization.totalBytes)}`
                 : `${fmtSize(t.downloaded)} of ${fmtSize(t.size)}`}
             </span>
@@ -537,7 +533,7 @@ function TorrentRow({
         <span className="eta">
           {sorting ? (
             <em className="sorting-state">
-              <FolderSync /> Sorting · {t.organization?.phase ?? "preparing"}
+              <FolderSync /> Sorting · {activelySorting ? (t.organization?.phase ?? "preparing") : "waiting"}
             </em>
           ) : t.status === "review" ? (
             <button className="review-link" onClick={review}>
