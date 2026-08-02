@@ -13,3 +13,13 @@ export function torrentMatchesFilter(filter: TorrentFilter, status: TorrentStatu
 export function isSortingStatus(status: TorrentStatus) {
   return status === "completed" || status === "processing";
 }
+
+export function displayedProgress(
+  status: TorrentStatus,
+  downloadProgress: number,
+  organizationProgress?: number,
+) {
+  if (status === "completed") return 0;
+  if (status === "processing") return organizationProgress ?? 0;
+  return downloadProgress;
+}

@@ -38,7 +38,7 @@ import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
 import { sortTorrents, type TorrentSort } from "./lib/sort";
 import { floatingMenuPosition, nearestRowScroll } from "./lib/layout";
-import { isSortingStatus, torrentMatchesFilter, type TorrentFilter } from "./lib/filter";
+import { displayedProgress, isSortingStatus, torrentMatchesFilter, type TorrentFilter } from "./lib/filter";
 import { formatEta, formatSpeed, overallDownloadEta, transferCounts } from "./lib/format";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
@@ -455,7 +455,7 @@ function TorrentRow({
     [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, maxHeight: 0 });
   const sorting = isSortingStatus(t.status),
     activelySorting = t.status === "processing",
-    shownProgress = activelySorting ? (t.organization?.progress ?? 0) : t.progress;
+    shownProgress = displayedProgress(t.status, t.progress, t.organization?.progress);
   const actionButton = useRef<HTMLButtonElement>(null);
   function positionActionMenu() {
     const anchor = actionButton.current;
