@@ -69,7 +69,7 @@ It normally takes a few minutes on the first run while Docker downloads and buil
 
 ## Step 2a: select your existing library folders
 
-After pairing, open **Settings** in Harbor. Select `/media/Movies`, `/media/TV Shows`, and `/media/Needs Review`, then choose **Save and verify**. These are container views of the Unraid media root selected during installation; Harbor verifies they are writable.
+After pairing, open **Settings** in Harbor. Select `/media/Movies`, `/media/TV Shows`, and `/media/Needs Review`, then choose **Save and verify**. These are container views of the Unraid media root selected during installation; Harbor verifies they are writable. The installer requires that host media root to exist and matches its capitalization, so entering `/mnt/user/media` safely selects an existing `/mnt/user/Media` instead of creating a second share.
 
 Settings also displays the corresponding Unraid host root, for example `/mnt/user/PCFiles → /media`. Confirm that the host root is the parent containing the Movies and TV Shows folders you actually browse over SMB. If it is wrong, rerun `./scripts/install-unraid.sh` and enter the correct media root; changing a container subfolder cannot change the Docker host mount.
 

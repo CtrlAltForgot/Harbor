@@ -25,7 +25,7 @@ jobs:
       - name: Build companion and UI
         run: npm run build -w @harbor/companion -w @harbor/ui
       - name: Validate installers
-        run: bash -n scripts/install-unraid.sh scripts/install-desktop.sh
+        run: bash -n scripts/install-unraid.sh scripts/install-desktop.sh scripts/lib/storage-paths.sh scripts/test-storage-paths.sh && bash scripts/test-storage-paths.sh
       - name: Validate Docker Compose
         env:
           HARBOR_PAIRING_CODE: validation-only

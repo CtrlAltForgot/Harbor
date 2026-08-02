@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Prevented the Unraid installer from silently creating case-conflicting media shares: an entered `/mnt/user/media` now resolves to an existing `/mnt/user/Media`, missing roots are rejected, ambiguous duplicates stop setup safely, and repair reruns preserve existing custom path and port defaults.
 - Made Harbor a single-instance desktop application: launching it again restores, unminimizes, and focuses the existing window instead of creating duplicate processes.
 - Fixed bodyless torrent controls such as Reannounce being rejected as empty JSON requests; browser and native transports now send content type only when a body exists, and qBittorrent failures retain action-specific details.
 - Made transfer speeds adaptive across the header, summary, and torrent rows: sub-0.1 MB/s values use kB/s, normal values use MB/s, and speeds above 1000 MB/s use GB/s.

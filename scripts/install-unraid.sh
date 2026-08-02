@@ -4,6 +4,8 @@ set -Eeuo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_dir="$(cd -- "$script_dir/.." && pwd)"
 cd "$repo_dir"
+# shellcheck source=scripts/lib/storage-paths.sh
+source "$script_dir/lib/storage-paths.sh"
 
 say() { printf '\n\033[1;36mHarbor:\033[0m %s\n' "$*"; }
 fail() { printf '\n\033[1;31mHarbor install failed:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -22,6 +24,22 @@ media_root="${HARBOR_MEDIA_ROOT:-$default_root/media}"
 puid="${PUID:-$default_uid}"; pgid="${PGID:-$default_gid}"
 harbor_port="${HARBOR_HOST_PORT:-7331}"; qbit_port="${QBITTORRENT_WEBUI_PORT:-8080}"; torrent_port="${TORRENTING_PORT:-6881}"
 
+read_saved_value() { sed -n "s/^$1=//p" .env | tail -n 1; }
+if [[ -f .env ]]; then
+  saved_config_path="$(read_saved_value HARBOR_CONFIG_PATH)"
+  saved_downloads_root="$(read_saved_value DOWNLOADS_ROOT)"
+  saved_media_root="$(read_saved_value MEDIA_ROOT_PATH)"
+  saved_puid="$(read_saved_value PUID)"; saved_pgid="$(read_saved_value PGID)"
+  saved_harbor_port="$(read_saved_value HARBOR_HOST_PORT)"; saved_qbit_port="$(read_saved_value QBITTORRENT_WEBUI_PORT)"
+  [[ -n "$saved_config_path" && -z "${HARBOR_APPDATA_ROOT+x}" ]] && appdata_root="$(dirname -- "$saved_config_path")"
+  [[ -n "$saved_downloads_root" && -z "${HARBOR_DOWNLOADS_ROOT+x}" ]] && downloads_root="$saved_downloads_root"
+  [[ -n "$saved_media_root" && -z "${HARBOR_MEDIA_ROOT+x}" ]] && media_root="$saved_media_root"
+  [[ -n "$saved_puid" && -z "${PUID+x}" ]] && puid="$saved_puid"
+  [[ -n "$saved_pgid" && -z "${PGID+x}" ]] && pgid="$saved_pgid"
+  [[ -n "$saved_harbor_port" && -z "${HARBOR_HOST_PORT+x}" ]] && harbor_port="$saved_harbor_port"
+  [[ -n "$saved_qbit_port" && -z "${QBITTORRENT_WEBUI_PORT+x}" ]] && qbit_port="$saved_qbit_port"
+fi
+
 if [[ "${HARBOR_NONINTERACTIVE:-0}" != 1 ]]; then
   say "This installs a dedicated qBittorrent and Harbor stack on Unraid. Your PC qBittorrent is untouched."
   printf 'Appdata folder [%s]: ' "$appdata_root"; read -r answer; appdata_root="${answer:-$appdata_root}"
@@ -36,9 +54,23 @@ fi
 for value in "$puid" "$pgid" "$harbor_port" "$qbit_port" "$torrent_port"; do [[ "$value" =~ ^[0-9]+$ ]] || fail "UID, GID, and ports must be numbers."; done
 [[ "$harbor_port" != "$qbit_port" ]] || fail "Harbor and qBittorrent must use different ports."
 
+resolved_media_root=""
+if resolved_media_root="$(resolve_existing_directory_case_insensitive "$media_root")"; then
+  if [[ "$resolved_media_root" != "$media_root" ]]; then
+    say "Using existing media root $resolved_media_root (matched the entered path without regard to capitalization)."
+  fi
+  media_root="$resolved_media_root"
+else
+  path_status=$?
+  if [[ "$path_status" == 2 ]]; then
+    fail "Multiple folders differ only by capitalization near $media_root. Merge the duplicate Unraid shares before installing Harbor."
+  fi
+  fail "Media root $media_root does not exist. Harbor will not create a new Unraid share; create or select the existing media root and rerun setup."
+fi
+
 previous_qbit_password=""
 previous_pairing_code=""
-if [[ -f .env ]]; then previous_qbit_password="$(sed -n 's/^QBITTORRENT_PASSWORD=//p' .env | tail -n 1)"; previous_pairing_code="$(sed -n 's/^HARBOR_PAIRING_CODE=//p' .env | tail -n 1)"; fi
+if [[ -f .env ]]; then previous_qbit_password="$(read_saved_value QBITTORRENT_PASSWORD)"; previous_pairing_code="$(read_saved_value HARBOR_PAIRING_CODE)"; fi
 pairing_code="${HARBOR_PAIRING_CODE:-${previous_pairing_code:-$(openssl rand -hex 16)}}"
 qbit_password="${QBITTORRENT_PASSWORD:-${previous_qbit_password:-$(openssl rand -base64 24 | tr -d '/+=' | head -c 24)}}"
 timezone="${TZ:-America/Chicago}"
