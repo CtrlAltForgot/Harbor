@@ -703,7 +703,13 @@ export async function buildApp(overrides: Partial<Config> = {}) {
         const byHash = new Map(
           remote.map((item) => [item.hash.toLowerCase(), item]),
         );
-        for (const torrent of store.list()) {
+        for (const snapshot of store.list()) {
+          // Organization can take minutes. A review correction may arrive while
+          // an earlier snapshot item is being copied, so reload immediately
+          // before reconciling this record instead of overwriting that correction
+          // with stale status/classification data.
+          const torrent = store.get(snapshot.id);
+          if (!torrent) continue;
           const found = byHash.get(torrent.infoHash.toLowerCase());
           if (!found) {
             if (
@@ -846,7 +852,9 @@ export async function buildApp(overrides: Partial<Config> = {}) {
           broadcast({ type: "torrent.updated", torrent: next });
         }
       } else {
-        for (const torrent of store.list()) {
+        for (const snapshot of store.list()) {
+          const torrent = store.get(snapshot.id);
+          if (!torrent) continue;
           const next = tick(torrent);
           if (next !== torrent) {
             store.save(next);

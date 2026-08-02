@@ -65,3 +65,5 @@ Closed an Unraid path-casing failure exposed by the first large personal-library
 Aligned the desktop filters with the organization queue. qBittorrent-complete records waiting behind another organizer job now render as orange Sorting rows with an explicit waiting phase; the Completed filter is reserved for records whose organized destination has been verified.
 
 Separated download completion from organization progress in sorting rows. Waiting items now display an empty 0% organization bar instead of inheriting qBittorrent's 100% download progress, and switch to streamed organizer progress only after processing begins.
+
+Removed a long-running scheduler race found under a real backlog. The qBittorrent synchronization pass captured every torrent before awaiting organization, so a manual correction made during an earlier copy could later be overwritten by that stale review record. Each snapshot ID is now reloaded from SQLite immediately before reconciliation; regression coverage confirms manual category/title/confidence survive subsequent scheduler ticks.

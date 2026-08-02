@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Fixed manual review corrections being overwritten by a stale scheduler snapshot while earlier torrents were organizing; corrected items now remain in Sorting and enter the organization queue normally.
 - Reset organization progress to 0% while a completed download waits in the Sorting queue; the bar advances only from live organizer progress.
 - Moved fully downloaded torrents awaiting organization into the Sorting tab and orange sorting state; Completed now contains only verified organized results.
 - Prevented the Unraid installer from silently creating case-conflicting media shares: an entered `/mnt/user/media` now resolves to an existing `/mnt/user/Media`, missing roots are rejected, ambiguous duplicates stop setup safely, and repair reruns preserve existing custom path and port defaults.

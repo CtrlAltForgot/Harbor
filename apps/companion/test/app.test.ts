@@ -251,6 +251,66 @@ describe("companion API", () => {
     expect(changed.json().retention).toBe("remove");
     await app.close();
   });
+  it("keeps a completed manual review authoritative across scheduler ticks", async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), "harbor-test-"));
+    dirs.push(dataDir);
+    const app = await buildApp({ dataDir, pairingCode: "x", engine: "mock" });
+    const auth = `Bearer ${await tokenWith(app, "x")}`;
+    const added = await app.inject({
+      method: "POST",
+      url: "/api/v1/torrents",
+      headers: { authorization: auth },
+      payload: {
+        magnet:
+          "magnet:?xt=urn:btih:cccccccccccccccccccccccccccccccccccccccc&dn=Ambiguous.Release",
+      },
+    });
+    const torrent = added.json();
+    const database = new Database(path.join(dataDir, "harbor.db"));
+    const reviewed = {
+      ...torrent,
+      progress: 1,
+      status: "review",
+      classification: {
+        ...torrent.classification,
+        confidence: 0.4,
+        reasons: ["ambiguous filename"],
+      },
+    };
+    database
+      .prepare("UPDATE torrents SET payload=? WHERE id=?")
+      .run(JSON.stringify(reviewed), torrent.id);
+    database.close();
+
+    const corrected = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/torrents/${torrent.id}/classification`,
+      headers: { authorization: auth },
+      payload: { category: "tv", title: "Corrected Show", season: 2 },
+    });
+    expect(corrected.statusCode).toBe(200);
+    expect(corrected.json()).toMatchObject({
+      status: "completed",
+      category: "tv",
+      classification: {
+        title: "Corrected Show",
+        confidence: 1,
+        reasons: ["manual correction"],
+      },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    const persisted = await app.inject({
+      url: `/api/v1/torrents/${torrent.id}`,
+      headers: { authorization: auth },
+    });
+    expect(persisted.json()).toMatchObject({
+      status: "completed",
+      category: "tv",
+      classification: { confidence: 1, reasons: ["manual correction"] },
+    });
+    await app.close();
+  });
 });
 async function tokenWith(app: any, code: string) {
   return (
