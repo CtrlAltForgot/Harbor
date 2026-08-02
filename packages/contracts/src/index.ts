@@ -114,6 +114,34 @@ export interface QbitPreferences {
   lsd: boolean;
   encryption: number;
   anonymousMode: boolean;
+  maxRatioEnabled: boolean;
+  maxRatio: number;
+  maxRatioAction: number;
+  maxSeedingTimeEnabled: boolean;
+  maxSeedingTime: number;
+  schedulerEnabled: boolean;
+  scheduleFromHour: number;
+  scheduleFromMinute: number;
+  scheduleToHour: number;
+  scheduleToMinute: number;
+  schedulerDays: number;
+  proxyType: number;
+  proxyAddress: string;
+  proxyPort: number;
+  proxyPeerConnections: boolean;
+  proxyAuthEnabled: boolean;
+  proxyUsername: string;
+  proxyPassword: string;
+  proxyPasswordConfigured: boolean;
+  proxyTorrentsOnly: boolean;
+}
+export interface QbitEngineInfo {
+  version: string;
+  webApiVersion: string;
+  connectionStatus: string;
+  alternativeSpeedLimits: boolean;
+  freeSpace: number;
+  recentLogs: Array<{ id: number; timestamp: number; type: number; message: string }>;
 }
 export interface AddTorrentRequest {
   magnet?: string;

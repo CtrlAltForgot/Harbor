@@ -1199,6 +1199,12 @@ select {
   gap: 13px;
   padding: 25px 30px 30px;
 }
+.engine-field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.engine-log { display:flex; flex-direction:column; gap:8px; margin:18px 0; padding:16px; border:1px solid var(--line); border-radius:14px; max-height:300px; overflow:auto; }
+.engine-log code { color:var(--muted); font:11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+.torrent-limits { display:flex; align-items:end; gap:12px; padding:12px 0 18px; border-bottom:1px solid var(--line); }
+.torrent-limits label { display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:12px; }
+.torrent-limits input { width:90px; }
 .engine-settings-panel h3 {
   margin-bottom: 5px;
 }

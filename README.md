@@ -12,7 +12,7 @@ The repository is ready for homelab use. In addition to automated tests, Harbor 
 ## What works
 
 - Pairing-code authentication with persistent hashed client tokens
-- Real qBittorrent 5.x Web API authentication, magnet/`.torrent` intake, monitoring, pause/resume/recheck/remove, file priorities, and per-torrent limits
+- Real qBittorrent 5.x Web API authentication, magnet/`.torrent` intake, monitoring, complete everyday transfer controls, and a Harbor-native settings tree for downloads, networking, bandwidth schedules, queueing, seeding, proxy/privacy, and sanitized diagnostics
 - Exact info-hash duplicate detection, including base32 magnets
 - SQLite queue/audit persistence and restart recovery
 - Local movie, episode, season-pack, and extension-based classification with optional TMDB confirmation

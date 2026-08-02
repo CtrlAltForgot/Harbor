@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Category,
   HarborSettings,
+  QbitEngineInfo,
   QbitPreferences,
   ServerStatus,
   Torrent,
@@ -421,7 +422,9 @@ function TorrentRow({
   const [actionOpen, setActionOpen] = useState(false),
     [expanded, setExpanded] = useState(false),
     [removeOpen, setRemoveOpen] = useState(false),
-    [actionError, setActionError] = useState("");
+    [actionError, setActionError] = useState(""),
+    [downloadLimit, setDownloadLimit] = useState(0),
+    [uploadLimit, setUploadLimit] = useState(0);
   async function act(action: string) {
     setActionOpen(false);
     setActionError("");
@@ -553,6 +556,11 @@ function TorrentRow({
                 Keep seeding
               </button>}
               {t.status !== "failed" && <button onClick={() => act("recheck")}>Recheck files</button>}
+              {t.status !== "failed" && <button onClick={() => act("reannounce")}>Reannounce to trackers</button>}
+              {t.status !== "failed" && <button onClick={() => act("queue-top")}>Move to top of queue</button>}
+              {t.status !== "failed" && <button onClick={() => act("queue-up")}>Move up in queue</button>}
+              {t.status !== "failed" && <button onClick={() => act("queue-down")}>Move down in queue</button>}
+              {t.status !== "failed" && <button onClick={() => act("queue-bottom")}>Move to bottom of queue</button>}
               <button
                 className="danger"
                 onClick={() => {
@@ -586,6 +594,12 @@ function TorrentRow({
             <strong>Files</strong>
             <span>{t.files.length} items</span>
           </header>
+          <div className="torrent-limits">
+            <label>Download limit <span><input type="number" min="0" value={downloadLimit} onChange={(event) => setDownloadLimit(Number(event.target.value))} /> KiB/s</span></label>
+            <label>Upload limit <span><input type="number" min="0" value={uploadLimit} onChange={(event) => setUploadLimit(Number(event.target.value))} /> KiB/s</span></label>
+            <button className="quiet" onClick={async () => { try { await api.limits(t.id, downloadLimit * 1024, uploadLimit * 1024); setActionError(""); } catch (error) { setActionError(error instanceof Error ? error.message : "Limits were rejected"); } }}>Apply limits</button>
+            <small>0 means unlimited.</small>
+          </div>
           {t.files.map((file) => (
             <div key={file.id}>
               <span>{file.name}</span>
@@ -1004,14 +1018,19 @@ type EngineSection =
   | "connection"
   | "speed"
   | "queueing"
-  | "bittorrent";
+  | "bittorrent"
+  | "seeding"
+  | "scheduler"
+  | "proxy"
+  | "diagnostics";
 
 function EngineSettings() {
   const [preferences, setPreferences] = useState<QbitPreferences | null>(null),
     [section, setSection] = useState<EngineSection>("downloads"),
     [notice, setNotice] = useState(""),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [engineInfo, setEngineInfo] = useState<QbitEngineInfo | null>(null);
   useEffect(() => {
     api.enginePreferences().then(setPreferences).catch((error) =>
       setError(
@@ -1039,12 +1058,22 @@ function EngineSettings() {
     key: K,
     value: QbitPreferences[K],
   ) => preferences && setPreferences({ ...preferences, [key]: value });
+  async function loadEngineInfo() {
+    setError("");
+    try { setEngineInfo(await api.engineInfo()); }
+    catch (error) { setError(error instanceof Error ? error.message : "Diagnostics could not be loaded"); }
+  }
+  useEffect(() => { if (section === "diagnostics") void loadEngineInfo(); }, [section]);
   const sections: Array<[EngineSection, string, typeof Download]> = [
     ["downloads", "Downloads", Download],
     ["connection", "Connection", Network],
     ["speed", "Speed", Gauge],
     ["queueing", "Queueing", ListOrdered],
     ["bittorrent", "BitTorrent", ShieldCheck],
+    ["seeding", "Seeding", Upload],
+    ["scheduler", "Scheduler", Gauge],
+    ["proxy", "Proxy", Network],
+    ["diagnostics", "Diagnostics", AlertTriangle],
   ];
   return (
     <section className="engine-settings">
@@ -1113,7 +1142,7 @@ function EngineSettings() {
               <NumberSetting label="Maximum active torrents" value={preferences.maxActiveTorrents} min={-1} onChange={(value) => update("maxActiveTorrents", value)} />
               <BooleanSetting label="Do not count slow torrents" value={preferences.dontCountSlowTorrents} onChange={(value) => update("dontCountSlowTorrents", value)} />
             </>
-          ) : (
+          ) : section === "bittorrent" ? (
             <>
               <h3>BitTorrent privacy and discovery</h3>
               <BooleanSetting label="Enable DHT" value={preferences.dht} onChange={(value) => update("dht", value)} />
@@ -1121,6 +1150,41 @@ function EngineSettings() {
               <BooleanSetting label="Enable Local Peer Discovery" value={preferences.lsd} onChange={(value) => update("lsd", value)} />
               <label className="engine-field">Encryption mode<select value={preferences.encryption} onChange={(event) => update("encryption", Number(event.target.value))}><option value={0}>Prefer encryption</option><option value={1}>Require encryption</option><option value={2}>Allow unencrypted only</option></select></label>
               <BooleanSetting label="Anonymous mode" value={preferences.anonymousMode} onChange={(value) => update("anonymousMode", value)} />
+            </>
+          ) : section === "seeding" ? (
+            <>
+              <h3>Seeding limits</h3>
+              <BooleanSetting label="Stop after reaching a share ratio" value={preferences.maxRatioEnabled} onChange={(value) => update("maxRatioEnabled", value)} />
+              <NumberSetting label="Maximum share ratio" value={preferences.maxRatio} min={0} onChange={(value) => update("maxRatio", value)} />
+              <BooleanSetting label="Stop after a set seeding time" value={preferences.maxSeedingTimeEnabled} onChange={(value) => update("maxSeedingTimeEnabled", value)} />
+              <NumberSetting label="Maximum seeding time (minutes)" value={preferences.maxSeedingTime} min={0} onChange={(value) => update("maxSeedingTime", value)} />
+              <label className="engine-field">When a limit is reached<select value={preferences.maxRatioAction} onChange={(event) => update("maxRatioAction", Number(event.target.value))}><option value={0}>Pause the torrent</option><option value={1}>Remove the torrent (keep files)</option></select><small>Harbor never deletes organized media through this setting.</small></label>
+            </>
+          ) : section === "scheduler" ? (
+            <>
+              <h3>Alternative speed schedule</h3>
+              <BooleanSetting label="Automatically use alternative speed limits" value={preferences.schedulerEnabled} onChange={(value) => update("schedulerEnabled", value)} />
+              <div className="engine-field-row"><NumberSetting label="Start hour" value={preferences.scheduleFromHour} min={0} max={23} onChange={(value) => update("scheduleFromHour", value)} /><NumberSetting label="Start minute" value={preferences.scheduleFromMinute} min={0} max={59} onChange={(value) => update("scheduleFromMinute", value)} /></div>
+              <div className="engine-field-row"><NumberSetting label="End hour" value={preferences.scheduleToHour} min={0} max={23} onChange={(value) => update("scheduleToHour", value)} /><NumberSetting label="End minute" value={preferences.scheduleToMinute} min={0} max={59} onChange={(value) => update("scheduleToMinute", value)} /></div>
+              <label className="engine-field">Active days<select value={preferences.schedulerDays} onChange={(event) => update("schedulerDays", Number(event.target.value))}><option value={0}>Every day</option><option value={1}>Weekdays</option><option value={2}>Weekends</option><option value={3}>Monday</option><option value={4}>Tuesday</option><option value={5}>Wednesday</option><option value={6}>Thursday</option><option value={7}>Friday</option><option value={8}>Saturday</option><option value={9}>Sunday</option></select></label>
+            </>
+          ) : section === "proxy" ? (
+            <>
+              <h3>Proxy</h3>
+              <label className="engine-field">Proxy type<select value={preferences.proxyType} onChange={(event) => update("proxyType", Number(event.target.value))}><option value={-1}>Disabled</option><option value={1}>HTTP</option><option value={2}>SOCKS5</option><option value={3}>HTTP with authentication</option><option value={4}>SOCKS5 with authentication</option><option value={5}>SOCKS4</option></select></label>
+              <TextSetting label="Host or IP address" value={preferences.proxyAddress} onChange={(value) => update("proxyAddress", value)} />
+              <NumberSetting label="Port" value={preferences.proxyPort} min={0} max={65535} onChange={(value) => update("proxyPort", value)} />
+              <BooleanSetting label="Use proxy for peer connections" value={preferences.proxyPeerConnections} onChange={(value) => update("proxyPeerConnections", value)} />
+              <BooleanSetting label="Enable proxy authentication" value={preferences.proxyAuthEnabled} onChange={(value) => update("proxyAuthEnabled", value)} />
+              <TextSetting label="Username" value={preferences.proxyUsername} onChange={(value) => update("proxyUsername", value)} />
+              <label className="engine-field">Password<input type="password" value={preferences.proxyPassword} placeholder={preferences.proxyPasswordConfigured ? "Saved — leave blank to keep" : "Not configured"} onChange={(event) => update("proxyPassword", event.target.value)} /><small>The stored password is never sent back to the desktop.</small></label>
+              <BooleanSetting label="Use proxy only for torrents" value={preferences.proxyTorrentsOnly} onChange={(value) => update("proxyTorrentsOnly", value)} />
+            </>
+          ) : (
+            <>
+              <h3>Engine diagnostics</h3>
+              {engineInfo ? <><ReadOnlySetting label="qBittorrent version" value={engineInfo.version} /><ReadOnlySetting label="Web API version" value={engineInfo.webApiVersion} /><ReadOnlySetting label="Network status" value={engineInfo.connectionStatus} /><ReadOnlySetting label="Free space" value={fmtSize(engineInfo.freeSpace)} /><BooleanSetting label="Use alternative speed limits now" value={engineInfo.alternativeSpeedLimits} onChange={async () => setEngineInfo(await api.toggleAlternativeSpeedLimits())} /><div className="engine-log"><strong>Recent sanitized qBittorrent log</strong>{engineInfo.recentLogs.length ? engineInfo.recentLogs.map((entry) => <code key={entry.id}>{new Date(entry.timestamp * 1000).toLocaleString()} · {entry.message}</code>) : <small>No recent log entries.</small>}</div></> : <div className="settings-loading">Loading diagnostics…</div>}
+              <button className="quiet" onClick={loadEngineInfo}>Refresh diagnostics</button>
             </>
           )}
           {notice && <div className="settings-success"><CheckCircle2 /> {notice}</div>}
@@ -1136,6 +1200,9 @@ function BooleanSetting({ label, value, onChange }: { label: string; value: bool
 }
 function NumberSetting({ label, value, min = 0, max, onChange }: { label: string; value: number; min?: number; max?: number; onChange: (value: number) => void }) {
   return <label className="engine-field">{label}<input type="number" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
+}
+function TextSetting({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="engine-field">{label}<input value={value} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 function SpeedSetting({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   return <label className="engine-field">{label}<div className="unit-input"><input type="number" min={0} value={Math.round(value / 1024)} onChange={(event) => onChange(Number(event.target.value) * 1024)} /><span>KiB/s</span></div><small>0 means unlimited.</small></label>;

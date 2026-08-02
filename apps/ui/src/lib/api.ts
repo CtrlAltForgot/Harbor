@@ -1,6 +1,7 @@
 import type {
   AddTorrentRequest,
   HarborSettings,
+  QbitEngineInfo,
   QbitPreferences,
   ServerStatus,
   Torrent,
@@ -147,6 +148,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(input),
     }),
+  engineInfo: () => request<QbitEngineInfo>("/api/v1/engine/info"),
+  toggleAlternativeSpeedLimits: () =>
+    request<QbitEngineInfo>("/api/v1/engine/alternative-speed-limits/toggle", {
+      method: "POST",
+    }),
   add: (input: AddTorrentRequest) =>
     request<Torrent>("/api/v1/torrents", {
       method: "POST",
@@ -181,5 +187,10 @@ export const api = {
     request<void>(`/api/v1/torrents/${id}/files/priority`, {
       method: "POST",
       body: JSON.stringify({ ids, priority }),
+    }),
+  limits: (id: string, download: number, upload: number) =>
+    request<void>(`/api/v1/torrents/${id}/limits`, {
+      method: "POST",
+      body: JSON.stringify({ download, upload }),
     }),
 };

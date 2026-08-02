@@ -7,6 +7,7 @@ import type {
   AddTorrentRequest,
   EventMessage,
   HarborSettings,
+  QbitEngineInfo,
   QbitPreferences,
   Torrent,
 } from "@harbor/contracts";
@@ -74,6 +75,26 @@ const qbitPreferencesSchema = z.object({
   lsd: z.boolean(),
   encryption: z.number().int().min(0).max(2),
   anonymousMode: z.boolean(),
+  maxRatioEnabled: z.boolean(),
+  maxRatio: z.number().min(0),
+  maxRatioAction: z.number().int().min(0).max(1),
+  maxSeedingTimeEnabled: z.boolean(),
+  maxSeedingTime: z.number().int().min(0),
+  schedulerEnabled: z.boolean(),
+  scheduleFromHour: z.number().int().min(0).max(23),
+  scheduleFromMinute: z.number().int().min(0).max(59),
+  scheduleToHour: z.number().int().min(0).max(23),
+  scheduleToMinute: z.number().int().min(0).max(59),
+  schedulerDays: z.number().int().min(0).max(9),
+  proxyType: z.number().int().min(-1).max(5),
+  proxyAddress: z.string().max(255),
+  proxyPort: z.number().int().min(0).max(65535),
+  proxyPeerConnections: z.boolean(),
+  proxyAuthEnabled: z.boolean(),
+  proxyUsername: z.string().max(255),
+  proxyPassword: z.string().max(1024),
+  proxyPasswordConfigured: z.boolean(),
+  proxyTorrentsOnly: z.boolean(),
 });
 
 export async function buildApp(overrides: Partial<Config> = {}) {
@@ -201,8 +222,30 @@ export async function buildApp(overrides: Partial<Config> = {}) {
       ...parsed.data,
       savePath: undefined,
       tempPath: undefined,
+      proxyPassword: parsed.data.proxyPassword ? "[updated]" : undefined,
     });
     return confirmed;
+  });
+  app.get("/api/v1/engine/info", async (request, reply): Promise<QbitEngineInfo | unknown> => {
+    if (!qbit)
+      return reply.code(400).send({ error: "qBittorrent is not configured" });
+    const info = await qbit.engineInfo();
+    return {
+      ...info,
+      recentLogs: info.recentLogs.map((entry) => ({
+        ...entry,
+        message: sanitizeEngineLog(entry.message),
+      })),
+    };
+  });
+  app.post("/api/v1/engine/alternative-speed-limits/toggle", async (request, reply) => {
+    if (!qbit)
+      return reply.code(400).send({ error: "qBittorrent is not configured" });
+    const info = await qbit.toggleAlternativeSpeedLimits();
+    store.audit("engine.alternative_speed_limits_toggled", null, {
+      enabled: info.alternativeSpeedLimits,
+    });
+    return { ...info, recentLogs: info.recentLogs.map((entry) => ({ ...entry, message: sanitizeEngineLog(entry.message) })) };
   });
   app.get("/api/v1/settings", async (): Promise<HarborSettings> => ({
     mediaRoot,
@@ -412,21 +455,19 @@ export async function buildApp(overrides: Partial<Config> = {}) {
       }
     }
     if (
-      !(["pause", "resume", "retry", "recheck"] as const).includes(
+      !(["pause", "resume", "retry", "recheck", "reannounce", "queue-up", "queue-down", "queue-top", "queue-bottom"] as const).includes(
         action as any,
       )
     )
       return reply.code(400).send({ error: "Unsupported action" });
-    if (qbit)
-      await qbit.action(
-        current.infoHash,
-        action === "retry"
-          ? "resume"
-          : (action as "pause" | "resume" | "recheck"),
-      );
+    if (qbit) {
+      const commands = { reannounce: "reannounce", "queue-up": "increasePrio", "queue-down": "decreasePrio", "queue-top": "topPrio", "queue-bottom": "bottomPrio" } as const;
+      if (action in commands) await qbit.command(current.infoHash, commands[action as keyof typeof commands]);
+      else await qbit.action(current.infoHash, action === "retry" ? "resume" : (action as "pause" | "resume" | "recheck"));
+    }
     const next: Torrent = {
       ...current,
-      status: action === "pause" ? "paused" : "queued",
+      status: action === "pause" ? "paused" : action === "resume" || action === "retry" ? "queued" : current.status,
       error: undefined,
     };
     store.save(next);
@@ -818,6 +859,26 @@ function mapQbitPreferences(values: Record<string, unknown>): QbitPreferences {
     lsd: bool("lsd"),
     encryption: number("encryption"),
     anonymousMode: bool("anonymous_mode"),
+    maxRatioEnabled: bool("max_ratio_enabled"),
+    maxRatio: number("max_ratio", 1),
+    maxRatioAction: number("max_ratio_act"),
+    maxSeedingTimeEnabled: bool("max_seeding_time_enabled"),
+    maxSeedingTime: number("max_seeding_time"),
+    schedulerEnabled: bool("scheduler_enabled"),
+    scheduleFromHour: number("schedule_from_hour"),
+    scheduleFromMinute: number("schedule_from_min"),
+    scheduleToHour: number("schedule_to_hour"),
+    scheduleToMinute: number("schedule_to_min"),
+    schedulerDays: number("scheduler_days"),
+    proxyType: number("proxy_type", -1),
+    proxyAddress: text("proxy_ip"),
+    proxyPort: number("proxy_port"),
+    proxyPeerConnections: bool("proxy_peer_connections"),
+    proxyAuthEnabled: bool("proxy_auth_enabled"),
+    proxyUsername: text("proxy_username"),
+    proxyPassword: "",
+    proxyPasswordConfigured: text("proxy_password").length > 0,
+    proxyTorrentsOnly: bool("proxy_torrents_only"),
   };
 }
 
@@ -847,5 +908,30 @@ function toQbitPreferences(values: z.infer<typeof qbitPreferencesSchema>) {
     lsd: values.lsd,
     encryption: values.encryption,
     anonymous_mode: values.anonymousMode,
+    max_ratio_enabled: values.maxRatioEnabled,
+    max_ratio: values.maxRatio,
+    max_ratio_act: values.maxRatioAction,
+    max_seeding_time_enabled: values.maxSeedingTimeEnabled,
+    max_seeding_time: values.maxSeedingTime,
+    scheduler_enabled: values.schedulerEnabled,
+    schedule_from_hour: values.scheduleFromHour,
+    schedule_from_min: values.scheduleFromMinute,
+    schedule_to_hour: values.scheduleToHour,
+    schedule_to_min: values.scheduleToMinute,
+    scheduler_days: values.schedulerDays,
+    proxy_type: values.proxyType,
+    proxy_ip: values.proxyAddress,
+    proxy_port: values.proxyPort,
+    proxy_peer_connections: values.proxyPeerConnections,
+    proxy_auth_enabled: values.proxyAuthEnabled,
+    proxy_username: values.proxyUsername,
+    ...(values.proxyPassword ? { proxy_password: values.proxyPassword } : {}),
+    proxy_torrents_only: values.proxyTorrentsOnly,
   };
+}
+
+function sanitizeEngineLog(message: string) {
+  return message
+    .replace(/(password|passwd|token|authorization|cookie)=?\s*[^\s,;]+/gi, "$1=[redacted]")
+    .replace(/(https?:\/\/)[^\s/@:]+:[^\s/@]+@/gi, "$1[redacted]@");
 }

@@ -91,7 +91,7 @@ You can drag one `.torrent` file anywhere over the Harbor Desktop window. Harbor
 
 Closing Harbor Desktop hides it in the system tray by default. Use **Open Harbor** or **Quit Harbor** from the tray menu. With desktop notifications enabled in Settings, Harbor notifies on organization or Needs Review transitions while it is running in the tray. The desktop is only a remote control: downloads, identification, and organization continue on Unraid even when the desktop application is fully quit.
 
-The **qBittorrent settings** area uses a category list on the left and live engine settings on the right. Download behavior, connection port/limits, global and alternative speeds, queueing, DHT/PeX/LSD, encryption, and anonymous mode are written to qBittorrent and read back before Harbor reports success. Container download paths are intentionally read-only because changing them outside Harbor could bypass organization and deletion safeguards.
+The **qBittorrent settings** area uses a category list on the left and live engine settings on the right. It covers download behavior, connection limits, global and scheduled alternative speeds, queueing, seeding limits, DHT/PeX/LSD, encryption, authenticated proxies, and sanitized engine diagnostics. Settings are written to qBittorrent and read back before Harbor reports success. Container download paths are intentionally read-only because changing them outside Harbor could bypass organization and deletion safeguards.
 
 ## Step 3: install Harbor Desktop on Nobara
 
@@ -106,7 +106,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-b8a874ef61a81200230e75d56c13a1554513047ad94c02fc54380518d3b6392e
+0cbd852d865ed250b778859dbda7e2d1efd8087387e4e4253e11bfed9fe2e205
 ```
 
 ## Step 4: pair

@@ -17,6 +17,9 @@ describe("qBittorrent adapter", () => {
             headers: { "set-cookie": "SID=test-session; HttpOnly; path=/" },
           });
         if (url.endsWith("/app/version")) return new Response("5.1.0");
+        if (url.endsWith("/app/webapiVersion")) return new Response("2.11.4");
+        if (url.endsWith("/transfer/info")) return Response.json({ connection_status: "connected", use_alt_speed_limits: false, free_space_on_disk: 4096 });
+        if (url.includes("/log/main")) return Response.json([{ id: 1, timestamp: 2, type: 1, message: "ready" }]);
         if (url.endsWith("/torrents/add")) present = true;
         if (url.endsWith("/torrents/stop")) state = "stoppedDL";
         if (url.endsWith("/torrents/start")) state = "downloading";
@@ -70,10 +73,15 @@ describe("qBittorrent adapter", () => {
     expect(String(remove.init.body)).toContain("deleteFiles=true");
     expect(await client.preferences()).toMatchObject({ dl_limit: 1024 });
     await client.setPreferences({ dl_limit: 2048, dht: false });
+    expect(await client.engineInfo()).toMatchObject({ version: "5.1.0", webApiVersion: "2.11.4", connectionStatus: "connected", freeSpace: 4096 });
+    await client.toggleAlternativeSpeedLimits();
+    await client.command("abc", "reannounce");
     const preferences = calls.find((call) =>
       call.url.endsWith("/app/setPreferences"),
     )!;
     expect(String(preferences.init.body)).toContain("dl_limit%22%3A2048");
+    expect(calls.some((call) => call.url.endsWith("/transfer/toggleSpeedLimitsMode"))).toBe(true);
+    expect(calls.some((call) => call.url.endsWith("/torrents/reannounce"))).toBe(true);
     expect(calls.filter((call) => call.url.endsWith("/auth/login"))).toHaveLength(1);
     expect(
       calls.slice(1).every(
