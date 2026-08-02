@@ -1,4 +1,5 @@
 import type { Torrent } from "@harbor/contracts";
+import { displayedProgress } from "./filter";
 
 export type TorrentSort =
   | "added-desc"
@@ -17,7 +18,10 @@ export function sortTorrents(items: Torrent[], sort: TorrentSort): Torrent[] {
       result = Date.parse(a.createdAt) - Date.parse(b.createdAt);
     else if (sort === "name-asc") result = a.name.localeCompare(b.name);
     else if (sort === "name-desc") result = b.name.localeCompare(a.name);
-    else if (sort === "progress-desc") result = b.progress - a.progress;
+    else if (sort === "progress-desc")
+      result =
+        displayedProgress(b.status, b.progress, b.organization?.progress) -
+        displayedProgress(a.status, a.progress, a.organization?.progress);
     else if (sort === "status-asc") result = a.status.localeCompare(b.status);
     return result || a.infoHash.localeCompare(b.infoHash);
   });

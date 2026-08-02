@@ -78,6 +78,28 @@ export function classify(name: string, files: string[] = []): Classification {
   };
 }
 
+export function recoverMetadataDemotion(
+  current: Classification,
+  name: string,
+  files: string[] = [],
+) {
+  const wasDemoted = current.reasons.some((reason) =>
+    reason === "TMDB did not return one unambiguous match" ||
+    reason === "TMDB unavailable; manual review required",
+  );
+  if (!wasDemoted) return current;
+  const local = classify(name, files);
+  if (local.confidence <= current.confidence) return current;
+  return {
+    ...local,
+    reasons: [
+      ...local.reasons,
+      "files inspected",
+      "strong local classification retained despite metadata advisory",
+    ],
+  };
+}
+
 function cleanTitle(value: string) {
   return value
     .replace(/\.(torrent)$/i, "")

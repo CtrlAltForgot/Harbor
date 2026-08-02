@@ -2,6 +2,8 @@
 
 ## 0.1.0 — Unreleased
 
+- Made Progress sorting use live organization progress for Sorting rows, placing actively processed items ahead of 0% waiting jobs instead of treating every completed download as 100%.
+- Stopped ambiguous or unavailable TMDB responses from downgrading strong local TV/movie evidence to 58%; existing provider-demoted backlog records are automatically rescored and released from Needs Review when filename/file structure remains reliable.
 - Fixed manual review corrections being overwritten by a stale scheduler snapshot while earlier torrents were organizing; corrected items now remain in Sorting and enter the organization queue normally.
 - Reset organization progress to 0% while a completed download waits in the Sorting queue; the bar advances only from live organizer progress.
 - Moved fully downloaded torrents awaiting organization into the Sorting tab and orange sorting state; Completed now contains only verified organized results.

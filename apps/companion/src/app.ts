@@ -16,7 +16,7 @@ import { loadConfig, type Config } from "./config.js";
 import { createTorrent, tick } from "./engine.js";
 import { Store } from "./store.js";
 import { QbitClient } from "./qbittorrent.js";
-import { classify } from "./classifier.js";
+import { classify, recoverMetadataDemotion } from "./classifier.js";
 import { cleanupStaging, organize } from "./organizer.js";
 import { TmdbMatcher } from "./metadata.js";
 import path from "node:path";
@@ -757,10 +757,9 @@ export async function buildApp(overrides: Partial<Config> = {}) {
               } catch (error) {
                 detected = {
                   ...detected,
-                  confidence: Math.min(detected.confidence, 0.58),
                   reasons: [
                     ...detected.reasons,
-                    "TMDB unavailable; manual review required",
+                    "TMDB unavailable; retained local classification",
                   ],
                 };
                 store.audit("metadata.lookup_failed", next.id, {
@@ -779,6 +778,28 @@ export async function buildApp(overrides: Partial<Config> = {}) {
             };
             if (next.progress >= 1 && detected.confidence < 0.8)
               next.status = "review";
+          }
+          const recovered = recoverMetadataDemotion(
+            next.classification,
+            next.name,
+            next.files.map((file) => file.name),
+          );
+          if (recovered !== next.classification) {
+            next = {
+              ...next,
+              classification: recovered,
+              destination:
+                config.destinations[recovered.category] ??
+                config.destinations.review!,
+              status:
+                next.progress >= 1 && recovered.confidence >= 0.8
+                  ? "completed"
+                  : next.status,
+            };
+            store.audit("classification.local_confidence_restored", next.id, {
+              category: recovered.category,
+              confidence: recovered.confidence,
+            });
           }
           if (
             next.status === "completed" &&

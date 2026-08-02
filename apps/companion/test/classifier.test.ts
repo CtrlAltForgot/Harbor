@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classify } from "../src/classifier.js";
+import { classify, recoverMetadataDemotion } from "../src/classifier.js";
 import { parseMagnet } from "../src/engine.js";
 describe("local classifier", () => {
   it.each([
@@ -52,6 +52,28 @@ describe("local classifier", () => {
     expect(classify("assorted files", ["readme.txt"])).toMatchObject({
       category: "review",
     }));
+  it("restores strong local evidence for records previously demoted by metadata", () => {
+    const restored = recoverMetadataDemotion(
+      {
+        category: "tv",
+        confidence: 0.58,
+        reasons: [
+          "season pack pattern",
+          "files inspected",
+          "TMDB did not return one unambiguous match",
+        ],
+        title: "The First 48",
+        season: 8,
+      },
+      "The First 48 Season 8",
+    );
+    expect(restored).toMatchObject({
+      category: "tv",
+      confidence: 0.92,
+      title: "The First 48",
+      season: 8,
+    });
+  });
   it("normalizes base32 magnet hashes for qBittorrent matching", () =>
     expect(
       parseMagnet("magnet:?xt=urn:btih:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA").hash,

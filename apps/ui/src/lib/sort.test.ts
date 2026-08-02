@@ -21,4 +21,20 @@ describe("torrent sorting", () => {
     expect(sortTorrents([b, a], "name-asc")).toEqual([a, b]);
     expect(sortTorrents([b, a], "progress-desc")).toEqual([a, b]);
   });
+
+  it("sorts the Sorting tab by organization progress instead of download completion", () => {
+    const waiting = {
+      ...torrent("Waiting", "2026-01-01T00:00:00Z", 1),
+      status: "completed",
+    } as Torrent;
+    const moving = {
+      ...torrent("Moving", "2026-01-02T00:00:00Z", 1),
+      status: "processing",
+      organization: { progress: 0.42 },
+    } as Torrent;
+    expect(sortTorrents([waiting, moving], "progress-desc")).toEqual([
+      moving,
+      waiting,
+    ]);
+  });
 });

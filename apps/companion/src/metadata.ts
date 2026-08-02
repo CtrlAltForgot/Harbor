@@ -76,10 +76,10 @@ export class TmdbMatcher {
     )
       return {
         ...input,
-        confidence: Math.min(input.confidence, 0.58),
         reasons: [
           ...input.reasons,
           "TMDB did not return one unambiguous match",
+          "strong local classification retained",
         ],
       };
     const canonical = best.result.title ?? best.result.name ?? input.title;

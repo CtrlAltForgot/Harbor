@@ -33,7 +33,7 @@ describe("TMDB metadata matching", () => {
       confidence: 0.98,
     });
   });
-  it("refuses to automate an ambiguous title", async () => {
+  it("keeps strong local evidence when TMDB cannot disambiguate a title", async () => {
     const fetcher = vi.fn(
       async () =>
         new Response(
@@ -58,7 +58,8 @@ describe("TMDB metadata matching", () => {
       season: 1,
       episode: 1,
     });
-    expect(result.confidence).toBeLessThan(0.8);
+    expect(result.confidence).toBe(0.96);
     expect(result.metadataId).toBeUndefined();
+    expect(result.reasons).toContain("strong local classification retained");
   });
 });
