@@ -38,7 +38,7 @@ import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
 import { sortTorrents, type TorrentSort } from "./lib/sort";
 import { floatingMenuPosition, nearestRowScroll } from "./lib/layout";
-import { formatEta, overallDownloadEta } from "./lib/format";
+import { formatEta, overallDownloadEta, transferCounts } from "./lib/format";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   isPermissionGranted,
@@ -201,6 +201,7 @@ export function App() {
       ),
     [items, filter, query, sort],
   );
+  const counts = transferCounts(items);
   if (!paired)
     return (
       <>
@@ -268,14 +269,13 @@ export function App() {
             </header>
             <section className="summary">
               <div>
+                <small>QUEUED</small>
+                <strong>{counts.queued}</strong>
+                <span>transfers</span>
+              </div>
+              <div>
                 <small>ACTIVE</small>
-                <strong>
-                  {
-                    items.filter((x) =>
-                      ["queued", "downloading", "paused"].includes(x.status),
-                    ).length
-                  }
-                </strong>
+                <strong>{counts.active}</strong>
                 <span>transfers</span>
               </div>
               <div>

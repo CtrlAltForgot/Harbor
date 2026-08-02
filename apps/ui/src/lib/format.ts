@@ -19,3 +19,27 @@ export function overallDownloadEta(
   if (estimates.length) return formatEta(Math.max(...estimates));
   return active.length ? "Waiting" : "—";
 }
+
+export function transferCounts(
+  torrents: Array<{ status: string; downloadSpeed: number }>,
+) {
+  const unfinished = new Set([
+    "queued",
+    "downloading",
+    "paused",
+    "completed",
+    "processing",
+  ]);
+  let active = 0,
+    queued = 0;
+  for (const torrent of torrents) {
+    if (!unfinished.has(torrent.status)) continue;
+    if (
+      torrent.status === "processing" ||
+      (torrent.status === "downloading" && torrent.downloadSpeed > 0)
+    )
+      active += 1;
+    else queued += 1;
+  }
+  return { active, queued };
+}
