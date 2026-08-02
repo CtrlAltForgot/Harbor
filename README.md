@@ -35,6 +35,8 @@ Development uses the safe mock engine unless `HARBOR_ENGINE=qbittorrent` is set.
 
 The guided installer creates and configures a dedicated qBittorrent container on Unraid; it does not touch qBittorrent on your PC.
 
+For upgrades, run `git pull && ./scripts/update-unraid.sh` from the existing Harbor checkout on Unraid, then update/reinstall the desktop. The update script rebuilds only Harbor and preserves the qBittorrent container, downloads, configuration, pairing state, and history.
+
 ```bash
 # On Unraid
 git clone --depth 1 https://github.com/CtrlAltForgot/Harbor.git /mnt/user/appdata/harbor-source

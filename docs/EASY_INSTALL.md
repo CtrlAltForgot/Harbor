@@ -106,7 +106,7 @@ cd ~/Harbor
 If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
 
 ```text
-0cbd852d865ed250b778859dbda7e2d1efd8087387e4e4253e11bfed9fe2e205
+f86a48473b853dcab3064d7a32a7a0324d7813c940759c8ad4f066101ce86d87
 ```
 
 ## Step 4: pair
@@ -117,6 +117,22 @@ If you already cloned Harbor elsewhere, use that directory instead. The script i
 4. Harbor should show **qBittorrent engine · Online** with no storage warning.
 
 If the pairing code or Unraid address changes later, open the gear button, use **Connection & pairing**, enter the current code, and select **Pair and reconnect**. This panel remains available even when the old credential has already been rejected. **Forget server** returns Harbor to the first-run pairing screen.
+
+## Updating Harbor
+
+The desktop and Unraid companion must be updated together. From the Harbor repository in an **Unraid terminal**, run:
+
+```bash
+git pull
+./scripts/update-unraid.sh
+```
+
+This pulls the current source and rebuilds only the Harbor companion. It preserves qBittorrent, downloads, pairing tokens, settings, and history. Then update the Nobara desktop from its Harbor repository:
+
+```bash
+git pull
+./scripts/install-desktop.sh
+```
 
 You can also use the same interface at `http://YOUR-UNRAID-IP:7331` in a browser.
 

@@ -93,6 +93,10 @@ async function request<T>(path: string, init: RequestInit = {}) {
   });
   if (response.status < 200 || response.status >= 300) {
     const body = parseBody<{ error?: string }>(response);
+    if (response.status === 404 && path.startsWith("/api/v1/engine/"))
+      throw new Error(
+        "Your Unraid Harbor companion is older than this desktop. In the Harbor folder on Unraid, run: git pull && ./scripts/update-unraid.sh — then reopen Settings.",
+      );
     throw new Error(body.error || `Request failed (${response.status})`);
   }
   return response.status === 204 ? (undefined as T) : parseBody<T>(response);
