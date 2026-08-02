@@ -13,6 +13,7 @@ import {
   Anchor,
   ArrowUpDown,
   CheckCircle2,
+  Clock3,
   Download,
   FolderCheck,
   KeyRound,
@@ -36,6 +37,7 @@ import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
 import { sortTorrents, type TorrentSort } from "./lib/sort";
 import { floatingMenuPosition } from "./lib/layout";
+import { formatEta, overallDownloadEta } from "./lib/format";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   isPermissionGranted,
@@ -45,12 +47,6 @@ import {
 
 const fmtSpeed = (n: number) => (n ? `${(n / 1e6).toFixed(1)} MB/s` : "—");
 const fmtSize = (n: number) => (n < 0 ? "—" : `${(n / 1e9).toFixed(1)} GB`);
-const fmtEta = (n: number | null) =>
-  n === null
-    ? "Waiting"
-    : n === 0
-      ? "Done"
-      : `${Math.floor(n / 60)}m ${n % 60}s`;
 
 export function App() {
   const [paired, setPaired] = useState(!!connection.get()),
@@ -262,6 +258,11 @@ export function App() {
                 <small>UPLOADING</small>
                 <strong>{fmtSpeed(status?.uploadSpeed ?? 0)}</strong>
                 <Upload />
+              </div>
+              <div>
+                <small>ALL DOWNLOADS ETA</small>
+                <strong>{overallDownloadEta(items)}</strong>
+                <Clock3 />
               </div>
               <div>
                 <small>NEEDS REVIEW</small>
@@ -519,7 +520,7 @@ function TorrentRow({
               <AlertTriangle /> Attention
             </em>
           ) : (
-            fmtEta(t.etaSeconds)
+            formatEta(t.etaSeconds)
           )}
         </span>
         <div className="row-actions">
