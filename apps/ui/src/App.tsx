@@ -38,7 +38,7 @@ import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
 import { sortTorrents, type TorrentSort } from "./lib/sort";
 import { floatingMenuPosition, nearestRowScroll } from "./lib/layout";
-import { formatEta, overallDownloadEta, transferCounts } from "./lib/format";
+import { formatEta, formatSpeed, overallDownloadEta, transferCounts } from "./lib/format";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   isPermissionGranted,
@@ -46,7 +46,6 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 
-const fmtSpeed = (n: number) => (n ? `${(n / 1e6).toFixed(1)} MB/s` : "—");
 const fmtSize = (n: number) => (n < 0 ? "—" : `${(n / 1e9).toFixed(1)} GB`);
 
 export function App() {
@@ -225,7 +224,7 @@ export function App() {
           <span>
             {error
               ? "Connection interrupted"
-              : `${fmtSpeed(status?.downloadSpeed ?? 0)} down · ${fmtSpeed(status?.uploadSpeed ?? 0)} up`}
+              : `${formatSpeed(status?.downloadSpeed ?? 0)} down · ${formatSpeed(status?.uploadSpeed ?? 0)} up`}
           </span>
         </div>
         <div className="header-actions">
@@ -280,12 +279,12 @@ export function App() {
               </div>
               <div>
                 <small>DOWNLOADING</small>
-                <strong>{fmtSpeed(status?.downloadSpeed ?? 0)}</strong>
+                <strong>{formatSpeed(status?.downloadSpeed ?? 0)}</strong>
                 <Download />
               </div>
               <div>
                 <small>UPLOADING</small>
-                <strong>{fmtSpeed(status?.uploadSpeed ?? 0)}</strong>
+                <strong>{formatSpeed(status?.uploadSpeed ?? 0)}</strong>
                 <Upload />
               </div>
               <div>
@@ -532,8 +531,8 @@ function TorrentRow({
           </p>
         </div>
         <div className="speed">
-          <strong>{fmtSpeed(t.downloadSpeed)}</strong>
-          <small>↑ {fmtSpeed(t.uploadSpeed)}</small>
+          <strong>{formatSpeed(t.downloadSpeed)}</strong>
+          <small>↑ {formatSpeed(t.uploadSpeed)}</small>
         </div>
         <span className="eta">
           {sorting ? (

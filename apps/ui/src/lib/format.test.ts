@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { formatEta, overallDownloadEta, transferCounts } from "./format";
+import { formatEta, formatSpeed, overallDownloadEta, transferCounts } from "./format";
+
+describe("adaptive transfer speeds", () => {
+  it("uses readable units from kilobytes through gigabytes", () => {
+    expect(formatSpeed(0)).toBe("—");
+    expect(formatSpeed(8_400)).toBe("8.4 kB/s");
+    expect(formatSpeed(84_000)).toBe("84 kB/s");
+    expect(formatSpeed(100_000)).toBe("0.1 MB/s");
+    expect(formatSpeed(84_000_000)).toBe("84.0 MB/s");
+    expect(formatSpeed(1_200_000_000)).toBe("1.2 GB/s");
+  });
+});
 
 describe("torrent ETA formatting", () => {
   it("uses hours for long downloads", () => {

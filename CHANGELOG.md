@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Made transfer speeds adaptive across the header, summary, and torrent rows: sub-0.1 MB/s values use kB/s, normal values use MB/s, and speeds above 1000 MB/s use GB/s.
 - Added a Queued summary metric and made Active reflect only torrents currently transferring data or being organized; waiting, stalled, and paused unfinished jobs now count as queued.
 - Added real byte/file organization progress with preparing, copying, verifying, and finalizing phases; sorting rows now use an orange folder-sync identity, their own filter, and clearer destination text. Fixed qBittorrent settings saves when disabled ratio/time limits use the engine's `-1` sentinel, with field-specific validation errors.
 - Prevented long queues from flex-shrinking the summary metrics out of view; only the torrent list now grows and scrolls within remaining space.

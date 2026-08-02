@@ -1,3 +1,14 @@
+export function formatSpeed(bytesPerSecond: number) {
+  if (bytesPerSecond <= 0) return "—";
+  if (bytesPerSecond < 100_000) {
+    const kilobytes = bytesPerSecond / 1_000;
+    return `${kilobytes.toFixed(kilobytes < 10 ? 1 : 0)} kB/s`;
+  }
+  if (bytesPerSecond > 1_000_000_000)
+    return `${(bytesPerSecond / 1_000_000_000).toFixed(1)} GB/s`;
+  return `${(bytesPerSecond / 1_000_000).toFixed(1)} MB/s`;
+}
+
 export function formatEta(seconds: number | null) {
   if (seconds === null) return "Waiting";
   if (seconds <= 0) return "Done";
