@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Added real byte/file organization progress with preparing, copying, verifying, and finalizing phases; sorting rows now use an orange folder-sync identity, their own filter, and clearer destination text. Fixed qBittorrent settings saves when disabled ratio/time limits use the engine's `-1` sentinel, with field-specific validation errors.
 - Prevented long queues from flex-shrinking the summary metrics out of view; only the torrent list now grows and scrolls within remaining space.
 - Prevented partially hidden torrent rows after window resizing by snapping the scrolling transfer surface to complete row boundaries beneath its sticky header.
 - Changed long torrent ETAs from unwieldy minute totals to hours/minutes and added an all-downloads ETA summary based on the longest currently downloading transfer.

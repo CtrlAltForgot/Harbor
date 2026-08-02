@@ -28,6 +28,14 @@ export interface TorrentFile {
   progress: number;
   priority: number;
 }
+export interface OrganizationProgress {
+  phase: "preparing" | "copying" | "verifying" | "finalizing";
+  progress: number;
+  bytesProcessed: number;
+  totalBytes: number;
+  filesProcessed: number;
+  totalFiles: number;
+}
 export interface Classification {
   category: Exclude<Category, "auto">;
   confidence: number;
@@ -64,6 +72,7 @@ export interface Torrent {
   completedAt?: string;
   error?: string;
   files: TorrentFile[];
+  organization?: OrganizationProgress;
 }
 export interface ServerStatus {
   name: string;

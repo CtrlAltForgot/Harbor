@@ -33,6 +33,25 @@ describe("safe organizer", () => {
     expect(readFileSync(source, "utf8")).toBe("lawful fixture");
     expect(result.bytes).toBe(14);
   });
+  it("reports monotonic copy, verification, and finalization progress", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "harbor-org-"));
+    roots.push(root);
+    const source = path.join(root, "progress.mkv"),
+      destination = path.join(root, "movies"),
+      updates: Array<{ phase: string; progress: number; bytesProcessed: number }> = [];
+    writeFileSync(source, Buffer.alloc(256 * 1024, 7));
+    await organize(
+      source,
+      destination,
+      { category: "movie", confidence: 1, reasons: [], title: "Progress" },
+      (progress) => updates.push(progress),
+    );
+    expect(updates[0]).toMatchObject({ phase: "preparing", progress: 0 });
+    expect(updates.some((update) => update.phase === "copying" && update.bytesProcessed > 0)).toBe(true);
+    expect(updates.some((update) => update.phase === "verifying")).toBe(true);
+    expect(updates.at(-1)).toMatchObject({ phase: "finalizing", progress: 1 });
+    expect(updates.every((update, index) => index === 0 || update.progress >= updates[index - 1]!.progress)).toBe(true);
+  });
   it("routes an episode to its season folder", () =>
     expect(
       buildRelativeName("show.mkv", {

@@ -34,4 +34,6 @@ Base URL: `http://SERVER:7331`. All `/api/v1/*` routes except pairing require `A
 
 Duplicate info hashes return `409` with the existing torrent. Errors use `{ "error": "human-readable message" }`.
 
+While `status` is `processing`, a torrent includes an `organization` object with the current `phase` (`preparing`, `copying`, `verifying`, or `finalizing`), normalized `progress`, byte totals, and file totals. Progress is persisted and returned by normal snapshots while the organizer streams data into the verified temporary destination.
+
 After verified organization, torrent records contain `organizedPath` and, when installed through Compose, `organizedHostPath`. The latter is the exact Unraid host location displayed by Harbor.

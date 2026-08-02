@@ -1,17 +1,21 @@
 import { constants } from "node:fs";
 import {
   access,
-  cp,
+  chmod,
+  lstat,
   mkdir,
   rename,
   rm,
   stat,
   statfs,
   readdir,
+  utimes,
 } from "node:fs/promises";
+import { createReadStream, createWriteStream } from "node:fs";
+import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Classification } from "@harbor/contracts";
+import type { Classification, OrganizationProgress } from "@harbor/contracts";
 
 export interface OrganizationResult {
   source: string;
@@ -49,7 +53,26 @@ export async function organize(
   source: string,
   destinationRoot: string,
   classification: Classification,
+  onProgress?: (progress: OrganizationProgress) => void,
 ): Promise<OrganizationResult> {
+  let lastPhase = "",
+    lastProgress = -1,
+    lastEmission = 0;
+  const report = (progress: OrganizationProgress, force = false) => {
+    const now = Date.now();
+    if (
+      force ||
+      progress.phase !== lastPhase ||
+      progress.progress - lastProgress >= 0.005 ||
+      now - lastEmission >= 250
+    ) {
+      lastPhase = progress.phase;
+      lastProgress = progress.progress;
+      lastEmission = now;
+      onProgress?.(progress);
+    }
+  };
+  report({ phase: "preparing", progress: 0, bytesProcessed: 0, totalBytes: 0, filesProcessed: 0, totalFiles: 0 }, true);
   await validateDestination(destinationRoot);
   classification = await reuseExistingSeriesFolder(
     destinationRoot,
@@ -78,7 +101,8 @@ export async function organize(
   }
   const temporary = `${destination}.harbor-${randomUUID()}.partial`;
   await mkdir(path.dirname(destination), { recursive: true });
-  const sourceBytes = await treeSize(source);
+  const sourceStats = await treeStats(source);
+  const sourceBytes = sourceStats.bytes;
   const filesystem = await statfs(destinationRoot);
   const available = Number(filesystem.bavail) * Number(filesystem.bsize);
   if (available < sourceBytes + 64 * 1024 * 1024)
@@ -86,18 +110,24 @@ export async function organize(
       `Insufficient destination space: need ${sourceBytes} bytes, have ${available}`,
     );
   try {
-    await cp(source, temporary, {
-      recursive: true,
-      errorOnExist: true,
-      preserveTimestamps: true,
+    let bytesProcessed = 0,
+      filesProcessed = 0;
+    report({ phase: "copying", progress: 0.02, bytesProcessed, totalBytes: sourceBytes, filesProcessed, totalFiles: sourceStats.files }, true);
+    await copyTree(source, temporary, (bytes, fileCompleted) => {
+      bytesProcessed += bytes;
+      if (fileCompleted) filesProcessed += 1;
+      const ratio = sourceBytes ? bytesProcessed / sourceBytes : filesProcessed / Math.max(1, sourceStats.files);
+      report({ phase: "copying", progress: 0.02 + Math.min(1, ratio) * 0.83, bytesProcessed, totalBytes: sourceBytes, filesProcessed, totalFiles: sourceStats.files });
     });
     await normalizePrimaryVideo(temporary, classification);
     await normalizeSeasonPack(temporary, classification);
+    report({ phase: "verifying", progress: 0.9, bytesProcessed: sourceBytes, totalBytes: sourceBytes, filesProcessed: sourceStats.files, totalFiles: sourceStats.files }, true);
     const targetBytes = await treeSize(temporary);
     if (sourceBytes !== targetBytes)
       throw new Error(
         `Copy verification failed: expected ${sourceBytes} bytes, found ${targetBytes}`,
       );
+    report({ phase: "finalizing", progress: 0.96, bytesProcessed: targetBytes, totalBytes: sourceBytes, filesProcessed: sourceStats.files, totalFiles: sourceStats.files }, true);
     if (mergeIntoExistingSeason) {
       const manifest = await fileManifest(temporary);
       await assertMergeHasNoCollisions(temporary, destination);
@@ -109,11 +139,55 @@ export async function organize(
       }
       await rm(temporary, { recursive: true, force: true });
     } else await rename(temporary, destination);
+    report({ phase: "finalizing", progress: 1, bytesProcessed: targetBytes, totalBytes: sourceBytes, filesProcessed: sourceStats.files, totalFiles: sourceStats.files }, true);
     return { source, destination, bytes: targetBytes, method: "copy" };
   } catch (error) {
     await rm(temporary, { recursive: true, force: true });
     throw error;
   }
+}
+
+async function treeStats(target: string): Promise<{ bytes: number; files: number }> {
+  const details = await lstat(target);
+  if (details.isSymbolicLink())
+    throw new Error(`Symbolic links are not allowed in downloaded content: ${target}`);
+  if (details.isFile()) return { bytes: details.size, files: 1 };
+  if (!details.isDirectory())
+    throw new Error(`Unsupported downloaded filesystem entry: ${target}`);
+  let bytes = 0,
+    files = 0;
+  for (const entry of await readdir(target)) {
+    const child = await treeStats(path.join(target, entry));
+    bytes += child.bytes;
+    files += child.files;
+  }
+  return { bytes, files };
+}
+
+async function copyTree(
+  source: string,
+  destination: string,
+  progressed: (bytes: number, fileCompleted: boolean) => void,
+): Promise<void> {
+  const details = await lstat(source);
+  if (details.isSymbolicLink())
+    throw new Error(`Symbolic links are not allowed in downloaded content: ${source}`);
+  if (details.isDirectory()) {
+    await mkdir(destination, { recursive: false });
+    for (const entry of await readdir(source))
+      await copyTree(path.join(source, entry), path.join(destination, entry), progressed);
+    await chmod(destination, details.mode);
+    await utimes(destination, details.atime, details.mtime);
+    return;
+  }
+  if (!details.isFile())
+    throw new Error(`Unsupported downloaded filesystem entry: ${source}`);
+  await mkdir(path.dirname(destination), { recursive: true });
+  const input = createReadStream(source);
+  input.on("data", (chunk) => progressed(Buffer.byteLength(chunk), false));
+  await pipeline(input, createWriteStream(destination, { flags: "wx", mode: details.mode }));
+  await utimes(destination, details.atime, details.mtime);
+  progressed(0, true);
 }
 
 async function reuseExistingSeriesFolder(

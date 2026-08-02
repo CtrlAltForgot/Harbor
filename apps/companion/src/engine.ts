@@ -82,6 +82,27 @@ export function createTorrent(
 }
 
 export function tick(torrent: Torrent): Torrent {
+  if (torrent.status === "processing") {
+    const progress = Math.min(1, (torrent.organization?.progress ?? 0) + 0.1);
+    if (progress >= 1)
+      return {
+        ...torrent,
+        status: "organized",
+        organization: undefined,
+        etaSeconds: 0,
+      };
+    return {
+      ...torrent,
+      organization: {
+        phase: progress < 0.8 ? "copying" : progress < 0.95 ? "verifying" : "finalizing",
+        progress,
+        bytesProcessed: Math.round(torrent.size * progress),
+        totalBytes: torrent.size,
+        filesProcessed: Math.floor(torrent.files.length * progress),
+        totalFiles: torrent.files.length,
+      },
+    };
+  }
   if (!(torrent.status === "queued" || torrent.status === "downloading"))
     return torrent;
   const progress = Math.min(1, torrent.progress + 0.0125);
@@ -91,7 +112,7 @@ export function tick(torrent: Torrent): Torrent {
     status: completed
       ? torrent.classification.confidence < 0.6
         ? "review"
-        : "organized"
+        : "processing"
       : "downloading",
     progress,
     downloaded: Math.round(torrent.size * progress),
@@ -106,6 +127,10 @@ export function tick(torrent: Torrent): Torrent {
       ? (torrent.completedAt ?? new Date().toISOString())
       : undefined,
     files: torrent.files.map((f) => ({ ...f, progress })),
+    organization:
+      completed && torrent.classification.confidence >= 0.6
+        ? { phase: "preparing", progress: 0, bytesProcessed: 0, totalBytes: torrent.size, filesProcessed: 0, totalFiles: torrent.files.length }
+        : undefined,
   };
 }
 function decodeBase32(value: string) {

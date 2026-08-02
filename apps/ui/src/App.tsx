@@ -16,6 +16,7 @@ import {
   Clock3,
   Download,
   FolderCheck,
+  FolderSync,
   KeyRound,
   Gauge,
   ListOrdered,
@@ -190,6 +191,7 @@ export function App() {
             (filter === "all" ||
               (filter === "active" &&
                 ["queued", "downloading"].includes(t.status)) ||
+              (filter === "sorting" && t.status === "processing") ||
               (filter === "review" && t.status === "review") ||
               (filter === "complete" &&
               ["organized", "completed"].includes(t.status))) &&
@@ -304,6 +306,7 @@ export function App() {
                 {[
                   ["all", "All"],
                   ["active", "Active"],
+                  ["sorting", "Sorting"],
                   ["complete", "Completed"],
                   ["review", "Needs review"],
                 ].map(([id, label]) => (
@@ -456,6 +459,8 @@ function TorrentRow({
     [downloadLimit, setDownloadLimit] = useState(0),
     [uploadLimit, setUploadLimit] = useState(0),
     [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, maxHeight: 0 });
+  const sorting = t.status === "processing",
+    shownProgress = sorting ? (t.organization?.progress ?? 0) : t.progress;
   const actionButton = useRef<HTMLButtonElement>(null);
   function positionActionMenu() {
     const anchor = actionButton.current;
@@ -488,31 +493,26 @@ function TorrentRow({
   }
   return (
     <>
-      <article className="torrent-row">
+      <article className={`torrent-row${sorting ? " processing" : ""}`}>
         <div className="torrent-name" onClick={() => setExpanded(!expanded)}>
-          <div className={`file-icon ${t.classification.category}`}>
-            <Download />
+          <div className={`file-icon ${sorting ? "sorting" : t.classification.category}`}>
+            {sorting ? <FolderSync /> : <Download />}
           </div>
           <div>
             <strong>{t.name}</strong>
             <p>
-              <span className="category">{t.classification.category}</span>
+              <span className="category">{t.classification.category === "tv" ? "TV" : t.classification.category}</span>
               <span
                 title={t.organizedHostPath ?? t.organizedPath ?? t.destination}
               >
                 {t.organizedPath
-                  ? `organized at ${t.organizedHostPath ?? t.organizedPath}`
-                  : `will move to ${t.destination}`}
+                  ? `Moved to → ${t.organizedHostPath ?? t.organizedPath}`
+                  : sorting
+                    ? `Moving to → ${t.destination}`
+                    : `Moving to → ${t.destination} on completion`}
               </span>
               <span>
                 {t.seeds} seeds · {t.peers} peers
-              </span>
-              <span>
-                {t.retention === "remove"
-                  ? "clean staging after"
-                  : t.retention === "seed"
-                    ? "keep seeding"
-                    : "retain staging"}
               </span>
             </p>
           </div>
@@ -520,12 +520,14 @@ function TorrentRow({
         <span>{fmtSize(t.size)}</span>
         <div className="progress">
           <div>
-            <i style={{ width: `${Math.round(t.progress * 100)}%` }} />
+            <i style={{ width: `${Math.round(shownProgress * 100)}%` }} />
           </div>
           <p>
-            <b>{Math.round(t.progress * 100)}%</b>
+            <b>{Math.round(shownProgress * 100)}%</b>
             <span>
-              {fmtSize(t.downloaded)} of {fmtSize(t.size)}
+              {sorting && t.organization
+                ? `${fmtSize(t.organization.bytesProcessed)} of ${fmtSize(t.organization.totalBytes)}`
+                : `${fmtSize(t.downloaded)} of ${fmtSize(t.size)}`}
             </span>
           </p>
         </div>
@@ -534,7 +536,11 @@ function TorrentRow({
           <small>↑ {fmtSpeed(t.uploadSpeed)}</small>
         </div>
         <span className="eta">
-          {t.status === "review" ? (
+          {sorting ? (
+            <em className="sorting-state">
+              <FolderSync /> Sorting · {t.organization?.phase ?? "preparing"}
+            </em>
+          ) : t.status === "review" ? (
             <button className="review-link" onClick={review}>
               Review
             </button>
@@ -551,7 +557,7 @@ function TorrentRow({
           )}
         </span>
         <div className="row-actions">
-          {t.status !== 'failed' && (
+          {["queued", "downloading", "paused"].includes(t.status) && (
             <button
               className="icon-button"
               title={t.status === "paused" ? "Resume" : "Pause"}
@@ -564,6 +570,8 @@ function TorrentRow({
           <button
             ref={actionButton}
             className="icon-button"
+            disabled={sorting}
+            title={sorting ? "Controls are available after sorting finishes" : "Torrent actions"}
             onClick={() => {
               positionActionMenu();
               setActionOpen(!actionOpen);

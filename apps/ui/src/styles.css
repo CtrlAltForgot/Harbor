@@ -323,6 +323,10 @@ select {
 .icon-button svg {
   width: 17px;
 }
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 .torrent-list {
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -389,6 +393,21 @@ select {
 .file-icon.review {
   background: #302820;
   color: #d4a966;
+}
+.file-icon.sorting {
+  background: #392b1d;
+  color: #e6a557;
+}
+.torrent-row.processing .progress i {
+  background: #e6a557;
+}
+.sorting-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #e6a557 !important;
+  text-transform: capitalize;
+  white-space: nowrap;
 }
 .torrent-name > div:last-child {
   min-width: 0;

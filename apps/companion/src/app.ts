@@ -9,6 +9,7 @@ import type {
   HarborSettings,
   QbitEngineInfo,
   QbitPreferences,
+  OrganizationProgress,
   Torrent,
 } from "@harbor/contracts";
 import { loadConfig, type Config } from "./config.js";
@@ -48,7 +49,7 @@ const addSchema = z
     "Provide exactly one torrent source",
   );
 
-const qbitPreferencesSchema = z.object({
+export const qbitPreferencesSchema = z.object({
   savePath: z.string(),
   tempPath: z.string(),
   tempPathEnabled: z.boolean(),
@@ -76,10 +77,10 @@ const qbitPreferencesSchema = z.object({
   encryption: z.number().int().min(0).max(2),
   anonymousMode: z.boolean(),
   maxRatioEnabled: z.boolean(),
-  maxRatio: z.number().min(0),
+  maxRatio: z.number().min(-1),
   maxRatioAction: z.number().int().min(0).max(1),
   maxSeedingTimeEnabled: z.boolean(),
-  maxSeedingTime: z.number().int().min(0),
+  maxSeedingTime: z.number().int().min(-1),
   schedulerEnabled: z.boolean(),
   scheduleFromHour: z.number().int().min(0).max(23),
   scheduleFromMinute: z.number().int().min(0).max(59),
@@ -214,8 +215,13 @@ export async function buildApp(overrides: Partial<Config> = {}) {
     if (!qbit)
       return reply.code(400).send({ error: "qBittorrent is not configured" });
     const parsed = qbitPreferencesSchema.safeParse(request.body);
-    if (!parsed.success)
-      return reply.code(400).send({ error: "Invalid qBittorrent settings" });
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const field = issue?.path.join(".") || "unknown field";
+      return reply.code(400).send({
+        error: `Invalid qBittorrent setting: ${field} — ${issue?.message ?? "invalid value"}`,
+      });
+    }
     await qbit.setPreferences(toQbitPreferences(parsed.data));
     const confirmed = mapQbitPreferences(await qbit.preferences());
     store.audit("engine.preferences_updated", null, {
@@ -421,10 +427,27 @@ export async function buildApp(overrides: Partial<Config> = {}) {
         const destination =
           config.destinations[current.classification.category] ??
           config.destinations.review!;
+        let processing: Torrent = {
+          ...current,
+          destination,
+          status: "processing",
+          downloadSpeed: 0,
+          uploadSpeed: 0,
+          etaSeconds: null,
+          organization: { phase: "preparing", progress: 0, bytesProcessed: 0, totalBytes: 0, filesProcessed: 0, totalFiles: 0 },
+          error: undefined,
+        };
+        store.save(processing);
+        broadcast({ type: "torrent.updated", torrent: processing });
         const result = await organize(
           source,
           destination,
           current.classification,
+          (organization) => {
+            processing = { ...processing, organization };
+            store.save(processing);
+            broadcast({ type: "torrent.updated", torrent: processing });
+          },
         );
         await qbit.remove(current.infoHash, false);
         await cleanupStaging(source, config.incompleteDir);
@@ -435,6 +458,7 @@ export async function buildApp(overrides: Partial<Config> = {}) {
           organizedHostPath: hostMediaPath(config, result.destination),
           retention: "remove",
           status: "organized",
+          organization: undefined,
           error: undefined,
         };
         store.save(next);
@@ -446,6 +470,14 @@ export async function buildApp(overrides: Partial<Config> = {}) {
         broadcast({ type: "torrent.updated", torrent: next });
         return next;
       } catch (error) {
+        const failed: Torrent = {
+          ...current,
+          status: "failed",
+          organization: undefined,
+          error: error instanceof Error ? error.message : "Re-organization failed",
+        };
+        store.save(failed);
+        broadcast({ type: "torrent.updated", torrent: failed });
         return reply
           .code(400)
           .send({
@@ -751,10 +783,25 @@ export async function buildApp(overrides: Partial<Config> = {}) {
                 throw new Error(
                   "qBittorrent content path is outside incomplete storage",
                 );
+              next = {
+                ...next,
+                status: "processing",
+                downloadSpeed: 0,
+                uploadSpeed: 0,
+                etaSeconds: null,
+                organization: { phase: "preparing", progress: 0, bytesProcessed: 0, totalBytes: 0, filesProcessed: 0, totalFiles: 0 },
+              };
+              store.save(next);
+              broadcast({ type: "torrent.updated", torrent: next });
               const result = await organize(
                 source,
                 next.destination,
                 next.classification,
+                (organization: OrganizationProgress) => {
+                  next = { ...next, status: "processing", organization };
+                  store.save(next);
+                  broadcast({ type: "torrent.updated", torrent: next });
+                },
               );
               next = {
                 ...next,
@@ -764,6 +811,7 @@ export async function buildApp(overrides: Partial<Config> = {}) {
                 etaSeconds: 0,
                 organizedPath: result.destination,
                 organizedHostPath: hostMediaPath(config, result.destination),
+                organization: undefined,
               };
               store.audit("organization.completed", next.id, result);
               if (next.retention === "stop")
@@ -781,6 +829,7 @@ export async function buildApp(overrides: Partial<Config> = {}) {
                   error instanceof Error
                     ? error.message
                     : "Organization failed",
+                organization: undefined,
               };
               store.audit("organization.failed", next.id, {
                 error: next.error,
