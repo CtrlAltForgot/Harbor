@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type {
   Category,
   HarborSettings,
@@ -34,6 +35,7 @@ import { api, connection } from "./lib/api";
 import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
 import { sortTorrents, type TorrentSort } from "./lib/sort";
+import { floatingMenuPosition } from "./lib/layout";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   isPermissionGranted,
@@ -228,7 +230,7 @@ export function App() {
           </button>
         </div>
       </header>
-      <main className="content">
+      <main className={view === "downloads" ? "content downloads-content" : "content"}>
         {view === "settings" ? (
           <SettingsPage connectionError={error} />
         ) : (
@@ -424,7 +426,26 @@ function TorrentRow({
     [removeOpen, setRemoveOpen] = useState(false),
     [actionError, setActionError] = useState(""),
     [downloadLimit, setDownloadLimit] = useState(0),
-    [uploadLimit, setUploadLimit] = useState(0);
+    [uploadLimit, setUploadLimit] = useState(0),
+    [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, maxHeight: 0 });
+  const actionButton = useRef<HTMLButtonElement>(null);
+  function positionActionMenu() {
+    const anchor = actionButton.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    setMenuPosition(floatingMenuPosition(rect, window.innerWidth, window.innerHeight));
+  }
+  useEffect(() => {
+    if (!actionOpen) return;
+    positionActionMenu();
+    const update = () => positionActionMenu();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [actionOpen]);
   async function act(action: string) {
     setActionOpen(false);
     setActionError("");
@@ -513,13 +534,17 @@ function TorrentRow({
           )}
           <>
           <button
+            ref={actionButton}
             className="icon-button"
-            onClick={() => setActionOpen(!actionOpen)}
+            onClick={() => {
+              positionActionMenu();
+              setActionOpen(!actionOpen);
+            }}
           >
             <MoreHorizontal />
           </button>
-          {actionOpen && (
-            <div className="action-menu">
+          {actionOpen && createPortal(
+            <div className="action-menu action-menu-portal" style={{ top: menuPosition.top, left: menuPosition.left, maxHeight: menuPosition.maxHeight }}>
               {t.status === "organized" && (
                 <button
                   onClick={async () => {
@@ -570,7 +595,8 @@ function TorrentRow({
               >
                 Remove torrent
               </button>
-            </div>
+            </div>,
+            document.body,
           )}
             </>
         </div>

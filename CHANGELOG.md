@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Made the transfer list consume the full remaining window height at every display scale and moved torrent action menus to a viewport-aware floating layer so long menus cannot be clipped by the scrolling list.
 - Added a safe one-command Unraid companion updater and an actionable desktop warning when the companion is too old for the installed desktop, replacing the misleading generic “Not found” settings error.
 - Expanded Harbor's qBittorrent administration tree with global seeding limits, scheduled alternative speeds, authenticated proxy controls with write-only passwords, sanitized engine diagnostics, per-torrent speed limits, tracker reannounce, and queue-position controls.
 - Added close-to-tray behavior, native completion/organization/review notifications, native drag-and-drop `.torrent` intake, a desktop-independence explanation, fully dark settings selectors, and a functional category-tree editor for practical qBittorrent download, connection, speed, queueing, and privacy settings.
