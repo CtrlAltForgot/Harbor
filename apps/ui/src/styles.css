@@ -325,6 +325,8 @@ select {
   flex: 1 1 auto;
   min-height: 180px;
   scrollbar-color: #31434a transparent;
+  scroll-snap-type: y proximity;
+  scroll-padding-top: 42px;
 }
 .list-head,
 .torrent-row {
@@ -350,6 +352,7 @@ select {
   min-height: 88px;
   padding: 14px 18px;
   border-bottom: 1px solid #1d292f;
+  scroll-snap-align: start;
 }
 .torrent-row:last-child {
   border: 0;

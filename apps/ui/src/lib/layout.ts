@@ -28,3 +28,10 @@ export function floatingMenuPosition(
     maxHeight,
   };
 }
+
+export function nearestRowScroll(scrollTop: number, rowStarts: number[]) {
+  if (!rowStarts.length) return scrollTop;
+  return rowStarts.reduce((nearest, start) =>
+    Math.abs(start - scrollTop) < Math.abs(nearest - scrollTop) ? start : nearest,
+  );
+}

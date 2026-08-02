@@ -36,7 +36,7 @@ import { api, connection } from "./lib/api";
 import { Pairing } from "./components/Pairing";
 import { AddTorrent } from "./components/AddTorrent";
 import { sortTorrents, type TorrentSort } from "./lib/sort";
-import { floatingMenuPosition } from "./lib/layout";
+import { floatingMenuPosition, nearestRowScroll } from "./lib/layout";
 import { formatEta, overallDownloadEta } from "./lib/format";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
@@ -69,7 +69,8 @@ export function App() {
       base64: string;
     } | null>(null);
   const previousItems = useRef<Map<string, Torrent>>(new Map()),
-    hasSnapshot = useRef(false);
+    hasSnapshot = useRef(false),
+    torrentList = useRef<HTMLElement>(null);
   async function refresh() {
     try {
       const [t, s] = await Promise.all([api.list(), api.status()]);
@@ -114,6 +115,32 @@ export function App() {
     const id = setInterval(refresh, 1200);
     return () => clearInterval(id);
   }, [paired]);
+  useEffect(() => {
+    if (view !== "downloads") return;
+    const list = torrentList.current;
+    if (!list) return;
+    let timer = 0;
+    const alignRows = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const listTop = list.getBoundingClientRect().top;
+        const headerHeight = list.querySelector<HTMLElement>(".list-head")?.offsetHeight ?? 0;
+        const starts = Array.from(list.querySelectorAll<HTMLElement>(".torrent-row")).map(
+          (row) => row.getBoundingClientRect().top - listTop + list.scrollTop - headerHeight,
+        );
+        const target = Math.max(0, nearestRowScroll(list.scrollTop, starts));
+        if (Math.abs(target - list.scrollTop) > 1)
+          list.scrollTo({ top: target, behavior: "smooth" });
+      }, 120);
+    };
+    list.addEventListener("scroll", alignRows, { passive: true });
+    window.addEventListener("resize", alignRows);
+    return () => {
+      window.clearTimeout(timer);
+      list.removeEventListener("scroll", alignRows);
+      window.removeEventListener("resize", alignRows);
+    };
+  }, [view]);
   useEffect(() => {
     if (!window.__TAURI__) return;
     let unlisten: (() => void) | undefined;
@@ -327,7 +354,7 @@ export function App() {
                 </button>
               </div>
             )}
-            <section className="torrent-list">
+            <section className="torrent-list" ref={torrentList}>
               <div className="list-head">
                 <span>NAME</span>
                 <span>SIZE</span>

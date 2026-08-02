@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { floatingMenuPosition } from "./layout";
+import { floatingMenuPosition, nearestRowScroll } from "./layout";
 
 describe("floating torrent action menu", () => {
   it("opens upward and remains inside the viewport for a bottom row", () => {
@@ -21,5 +21,12 @@ describe("floating torrent action menu", () => {
     );
     expect(result.top).toBe(124);
     expect(result.maxHeight).toBeLessThanOrEqual(230);
+  });
+});
+
+describe("torrent list row alignment", () => {
+  it("settles fractional scrolling onto the nearest complete row", () => {
+    expect(nearestRowScroll(47, [0, 88, 176])).toBe(88);
+    expect(nearestRowScroll(24, [0, 88, 176])).toBe(0);
   });
 });
