@@ -175,7 +175,7 @@ rm -rf -- "$vpn_tmp_dir"
 if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then chown -R "$puid:$pgid" "$appdata_root/qbittorrent/openvpn"; fi
 
 say "Starting qBittorrent inside the PIA VPN kill-switch container"
-docker compose up -d qbittorrent
+docker compose up -d --force-recreate qbittorrent
 temporary_password=""
 login_password=""
 cookie_file="$(mktemp)"; trap 'rm -f "$cookie_file"' EXIT
@@ -191,7 +191,7 @@ for _ in {1..60}; do
   if [[ -n "$temporary_password" ]]; then login_password="$temporary_password"; break; fi
   sleep 2
 done
-[[ -n "$login_password" ]] || fail "Could not obtain or reuse qBittorrent credentials. Run: docker compose logs qbittorrent"
+[[ -n "$login_password" ]] || fail "Could not obtain or reuse qBittorrent credentials. Check docker compose logs qbittorrent locally; redact VPN_PASS before sharing logs."
 
 login_status="$(curl -sS -o /dev/null -w '%{http_code}' -c "$cookie_file" -H "Referer: $qbit_origin" --data-urlencode 'username=admin' --data-urlencode "password=$login_password" "$qbit_origin/api/v2/auth/login")"
 if [[ "$login_status" != 200 && "$login_status" != 204 ]] || ! grep -q 'SID' "$cookie_file"; then fail "Could not authenticate with the new qBittorrent container (HTTP $login_status)."; fi
