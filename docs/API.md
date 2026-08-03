@@ -30,6 +30,7 @@ Base URL: `http://SERVER:7331`. All `/api/v1/*` routes except pairing require `A
 | PATCH | `/api/v1/torrents/:id/classification` | Confirm or correct category/title/episode data |
 | PATCH | `/api/v1/torrents/:id/retention` | Change `{retention}`; cleanup can be applied to an already organized torrent |
 | DELETE | `/api/v1/torrents/:id` | Remove from qBittorrent and Harbor; optional `{deleteFiles:true}` deletes only guarded staging data, never organized media |
+| POST | `/api/v1/bulk/remove-completed` | Remove all organized torrents from qBittorrent and Harbor while always preserving verified library files; returns per-item failures |
 | WS | `/api/v1/events` | Snapshot and update messages |
 
 Duplicate info hashes return `409` with the existing torrent. Errors use `{ "error": "human-readable message" }`.

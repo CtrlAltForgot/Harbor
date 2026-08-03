@@ -251,6 +251,22 @@ select {
   display: flex;
   gap: 8px;
 }
+.bulk-remove-button {
+  height: 37px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid #57352d;
+  border-radius: 10px;
+  background: #211a18;
+  color: #e9a092;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bulk-remove-button svg {
+  width: 15px;
+}
 .sort-control {
   height: 37px;
   min-width: 150px;

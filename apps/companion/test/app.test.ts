@@ -311,6 +311,50 @@ describe("companion API", () => {
     });
     await app.close();
   });
+  it("bulk-removes organized records without deleting library data", async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), "harbor-test-"));
+    dirs.push(dataDir);
+    const app = await buildApp({ dataDir, pairingCode: "x", engine: "mock" });
+    const auth = `Bearer ${await tokenWith(app, "x")}`;
+    for (const [hash, name] of [
+      ["1111111111111111111111111111111111111111", "Finished One"],
+      ["2222222222222222222222222222222222222222", "Finished Two"],
+    ])
+      await app.inject({
+        method: "POST",
+        url: "/api/v1/torrents",
+        headers: { authorization: auth },
+        payload: { magnet: `magnet:?xt=urn:btih:${hash}&dn=${name}` },
+      });
+    const database = new Database(path.join(dataDir, "harbor.db"));
+    database
+      .prepare(
+        "UPDATE torrents SET payload=json_set(payload, '$.status', 'organized', '$.organizedPath', '/media/Movies/Verified')",
+      )
+      .run();
+    database.close();
+
+    const removed = await app.inject({
+      method: "POST",
+      url: "/api/v1/bulk/remove-completed",
+      headers: { authorization: auth },
+    });
+    expect(removed.statusCode).toBe(200);
+    expect(removed.json()).toMatchObject({
+      requested: 2,
+      removed: 2,
+      failed: [],
+    });
+    expect(
+      (
+        await app.inject({
+          url: "/api/v1/torrents",
+          headers: { authorization: auth },
+        })
+      ).json(),
+    ).toEqual([]);
+    await app.close();
+  });
 });
 async function tokenWith(app: any, code: string) {
   return (

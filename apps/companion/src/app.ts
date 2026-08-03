@@ -683,6 +683,47 @@ export async function buildApp(overrides: Partial<Config> = {}) {
     broadcast({ type: "torrent.removed", torrentId: id });
     return reply.code(204).send();
   });
+  app.post("/api/v1/bulk/remove-completed", async () => {
+    const completed = store
+      .list()
+      .filter((torrent) => torrent.status === "organized");
+    const remoteByHash = qbit
+      ? new Map(
+          (await qbit.list()).map((torrent) => [
+            torrent.hash.toLowerCase(),
+            torrent,
+          ]),
+        )
+      : new Map();
+    const failed: Array<{ id: string; name: string; error: string }> = [];
+    let removed = 0;
+    for (const torrent of completed) {
+      try {
+        if (qbit && remoteByHash.has(torrent.infoHash.toLowerCase()))
+          await qbit.remove(torrent.infoHash, false);
+        store.remove(torrent.id, {
+          bulk: true,
+          downloadedDataDeleted: false,
+          organizedLibraryPreserved: true,
+        });
+        broadcast({ type: "torrent.removed", torrentId: torrent.id });
+        removed += 1;
+      } catch (error) {
+        failed.push({
+          id: torrent.id,
+          name: torrent.name,
+          error: error instanceof Error ? error.message : "Removal failed",
+        });
+      }
+    }
+    store.audit("torrent.bulk_remove_completed", null, {
+      requested: completed.length,
+      removed,
+      failed: failed.length,
+      organizedLibraryPreserved: true,
+    });
+    return { requested: completed.length, removed, failed };
+  });
   app.get("/api/v1/events", { websocket: true }, (socket) => {
     clients.add(socket);
     socket.send(

@@ -174,6 +174,12 @@ export const api = {
       method: "DELETE",
       body: JSON.stringify({ deleteFiles }),
     }),
+  removeCompleted: () =>
+    request<{
+      requested: number;
+      removed: number;
+      failed: Array<{ id: string; name: string; error: string }>;
+    }>("/api/v1/bulk/remove-completed", { method: "POST" }),
   correct: (
     id: string,
     input: {

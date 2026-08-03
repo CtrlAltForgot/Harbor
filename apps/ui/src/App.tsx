@@ -29,6 +29,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Trash2,
   Upload,
   Wifi,
   X,
@@ -55,6 +56,7 @@ export function App() {
     [status, setStatus] = useState<ServerStatus | null>(null),
     [adding, setAdding] = useState(false),
     [reviewing, setReviewing] = useState<Torrent | null>(null),
+    [bulkRemoveOpen, setBulkRemoveOpen] = useState(false),
     [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all"),
     [sort, setSort] = useState<TorrentSort>(() => {
@@ -196,6 +198,7 @@ export function App() {
     [items, filter, query, sort],
   );
   const counts = transferCounts(items);
+  const completedCount = items.filter((item) => item.status === "organized").length;
   if (!paired)
     return (
       <>
@@ -314,6 +317,14 @@ export function App() {
                 ))}
               </div>
               <div className="tools">
+                {filter === "complete" && completedCount > 0 && (
+                  <button
+                    className="bulk-remove-button"
+                    onClick={() => setBulkRemoveOpen(true)}
+                  >
+                    <Trash2 /> Clear completed
+                  </button>
+                )}
                 <label className="sort-control" title="Sort torrents">
                   <ArrowUpDown />
                   <select
@@ -411,6 +422,67 @@ export function App() {
           }}
         />
       )}
+      {bulkRemoveOpen && (
+        <BulkRemoveCompleted
+          count={completedCount}
+          close={() => setBulkRemoveOpen(false)}
+          removed={() => {
+            setBulkRemoveOpen(false);
+            refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function BulkRemoveCompleted({
+  count,
+  close,
+  removed,
+}: {
+  count: number;
+  close: () => void;
+  removed: () => void;
+}) {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  async function removeAll() {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api.removeCompleted();
+      if (result.failed.length)
+        throw new Error(
+          `${result.removed} removed; ${result.failed.length} could not be removed. ${result.failed[0]!.name}: ${result.failed[0]!.error}`,
+        );
+      removed();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Completed torrents could not be removed");
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="scrim" onMouseDown={(event) => event.target === event.currentTarget && close()}>
+      <section className="confirm-card">
+        <header>
+          <div>
+            <p className="eyebrow">CLEAR COMPLETED</p>
+            <h2>Remove {count} completed torrent{count === 1 ? "" : "s"}?</h2>
+          </div>
+          <button className="icon-button" onClick={close}><X /></button>
+        </header>
+        <p>
+          Harbor will remove these organized torrents from qBittorrent and its list. Their verified Movies and TV library files will remain untouched. Removed torrents can be added again later.
+        </p>
+        {error && <div className="error"><AlertTriangle /> {error}</div>}
+        <footer>
+          <button className="quiet" onClick={close}>Cancel</button>
+          <button className="danger-action" disabled={busy} onClick={removeAll}>
+            {busy ? "Removing…" : "Remove completed torrents"}
+          </button>
+        </footer>
+      </section>
     </div>
   );
 }

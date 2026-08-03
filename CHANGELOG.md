@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased
 
+- Added a confirmed Clear completed action to the Completed tab that bulk-removes organized torrents from qBittorrent and Harbor while always preserving verified library files.
 - Made Progress sorting use live organization progress for Sorting rows, placing actively processed items ahead of 0% waiting jobs instead of treating every completed download as 100%.
 - Stopped ambiguous or unavailable TMDB responses from downgrading strong local TV/movie evidence to 58%; existing provider-demoted backlog records are automatically rescored and released from Needs Review when filename/file structure remains reliable.
 - Fixed manual review corrections being overwritten by a stale scheduler snapshot while earlier torrents were organizing; corrected items now remain in Sorting and enter the organization queue normally.
