@@ -50,6 +50,10 @@ cd ~/Harbor
 ./scripts/install-desktop.sh
 ```
 
+The Nobara installer registers Harbor as the default handler for browser magnet
+links and `.torrent` files. Opening either brings up Harbor's normal confirmation
+sheet before anything is sent to the server.
+
 See the complete [easy installation guide](docs/EASY_INSTALL.md). Advanced path and mover details are in [the Unraid guide](docs/UNRAID.md).
 
 ## Repository

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { qbitPreferencesSchema } from "../src/app.js";
+import { PIA_PROXY_HOST, PIA_PROXY_PORT, piaProxyPreferences, qbitPreferencesSchema } from "../src/app.js";
 
 describe("qBittorrent preference validation", () => {
   it("accepts qBittorrent's disabled-limit sentinel values", () => {
@@ -16,5 +16,21 @@ describe("qBittorrent preference validation", () => {
       proxyUsername: "", proxyPassword: "", proxyPasswordConfigured: false, proxyTorrentsOnly: false,
     });
     expect(parsed.success).toBe(true);
+  });
+});
+
+describe("PIA proxy preset", () => {
+  it("routes peers and hostname lookups through authenticated PIA SOCKS5", () => {
+    expect(piaProxyPreferences("proxy-user", "secret")).toEqual({
+      proxy_type: 4,
+      proxy_ip: PIA_PROXY_HOST,
+      proxy_port: PIA_PROXY_PORT,
+      proxy_peer_connections: true,
+      proxy_auth_enabled: true,
+      proxy_username: "proxy-user",
+      proxy_password: "secret",
+      proxy_torrents_only: false,
+      proxy_hostname_lookup: true,
+    });
   });
 });

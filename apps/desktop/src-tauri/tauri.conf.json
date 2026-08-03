@@ -34,6 +34,23 @@
       "icons/128x128@2x.png",
       "icons/icon.png"
     ],
-    "linux": { "rpm": { "release": "27" } }
+    "linux": {
+      "rpm": {
+        "release": "29",
+        "desktopTemplate": "harbor.desktop.hbs"
+      }
+    },
+    "fileAssociations": [
+      {
+        "ext": ["torrent"],
+        "mimeType": "application/x-bittorrent",
+        "role": "Viewer"
+      }
+    ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["magnet"] }
+    }
   }
 }

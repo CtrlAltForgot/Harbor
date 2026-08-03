@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import type {
   Category,
   HarborSettings,
+  PiaProxyStatus,
   QbitEngineInfo,
   QbitPreferences,
   ServerStatus,
@@ -42,6 +43,7 @@ import { floatingMenuPosition, nearestRowScroll } from "./lib/layout";
 import { displayedProgress, isSortingStatus, torrentMatchesFilter, type TorrentFilter } from "./lib/filter";
 import { formatEta, formatSpeed, overallDownloadEta, transferCounts } from "./lib/format";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { listen } from "@tauri-apps/api/event";
 import {
   isPermissionGranted,
   requestPermission,
@@ -54,6 +56,7 @@ export function App() {
   const [paired, setPaired] = useState(!!connection.get()),
     [items, setItems] = useState<Torrent[]>([]),
     [status, setStatus] = useState<ServerStatus | null>(null),
+    [piaStatus, setPiaStatus] = useState<PiaProxyStatus | null>(null),
     [adding, setAdding] = useState(false),
     [reviewing, setReviewing] = useState<Torrent | null>(null),
     [bulkRemoveOpen, setBulkRemoveOpen] = useState(false),
@@ -70,7 +73,8 @@ export function App() {
     [droppedFile, setDroppedFile] = useState<{
       name: string;
       base64: string;
-    } | null>(null);
+    } | null>(null),
+    [openedMagnet, setOpenedMagnet] = useState("");
   const previousItems = useRef<Map<string, Torrent>>(new Map()),
     hasSnapshot = useRef(false),
     torrentList = useRef<HTMLElement>(null);
@@ -118,6 +122,13 @@ export function App() {
     const id = setInterval(refresh, 1200);
     return () => clearInterval(id);
   }, [paired]);
+  useEffect(() => {
+    if (!paired || view !== "downloads") return;
+    const refreshPia = () => api.piaStatus().then(setPiaStatus).catch(() => setPiaStatus(null));
+    void refreshPia();
+    const id = setInterval(refreshPia, 15_000);
+    return () => clearInterval(id);
+  }, [paired, view]);
   useEffect(() => {
     if (view !== "downloads") return;
     const list = torrentList.current;
@@ -184,6 +195,39 @@ export function App() {
       .then((stop) => (unlisten = stop))
       .catch(() => {});
     return () => unlisten?.();
+  }, []);
+  useEffect(() => {
+    if (!window.__TAURI__) return;
+    let stop: (() => void) | undefined;
+    const openActivation = async (values: string[]) => {
+      const magnet = values.find((value) => value.toLowerCase().startsWith("magnet:?"));
+      const torrent = values.find((value) => value.toLowerCase().endsWith(".torrent"));
+      try {
+        if (torrent) {
+          const dropped = await window.__TAURI__!.core.invoke<{ name: string; bytes: number[] }>(
+            "read_torrent_file",
+            { path: torrent },
+          );
+          setDroppedFile({ name: dropped.name, base64: bytesToBase64(dropped.bytes) });
+          setOpenedMagnet("");
+        } else if (magnet) {
+          setOpenedMagnet(magnet);
+          setDroppedFile(null);
+        } else return;
+        setDropError("");
+        setAdding(true);
+      } catch (error) {
+        setDropError(error instanceof Error ? error.message : String(error));
+      }
+    };
+    window.__TAURI__.core
+      .invoke<string[]>("take_pending_activations", {})
+      .then(openActivation)
+      .catch(() => {});
+    listen<string[]>("harbor-open", (event) => void openActivation(event.payload))
+      .then((unlisten) => (stop = unlisten))
+      .catch(() => {});
+    return () => stop?.();
   }, []);
   const visible = useMemo(
     () =>
@@ -263,6 +307,13 @@ export function App() {
                 <p className="eyebrow">YOUR SERVER</p>
                 <h1>Downloads</h1>
               </div>
+              <button className={`privacy-status ${piaStatus?.configured && status?.engineConnected !== false ? "online" : "offline"}`} onClick={() => setView("settings")}>
+                <span className="privacy-status-icon"><ShieldCheck /><i /></span>
+                <span>
+                  <strong>{piaStatus?.configured && status?.engineConnected !== false ? "PIA routing on" : "PIA routing off"}</strong>
+                  <small>{piaStatus?.configured && status?.engineConnected !== false ? "Torrent traffic configured through PIA" : "Torrent traffic uses your ISP connection"}</small>
+                </span>
+              </button>
             </header>
             <section className="summary">
               <div>
@@ -404,10 +455,13 @@ export function App() {
       )}
       {adding && (
         <AddTorrent
+          key={droppedFile?.name ?? openedMagnet ?? "manual"}
           initialFile={droppedFile}
+          initialMagnet={openedMagnet}
           close={() => {
             setAdding(false);
             setDroppedFile(null);
+            setOpenedMagnet("");
           }}
           added={refresh}
         />
@@ -1150,6 +1204,7 @@ type EngineSection =
   | "bittorrent"
   | "seeding"
   | "scheduler"
+  | "pia"
   | "proxy"
   | "diagnostics";
 
@@ -1159,9 +1214,16 @@ function EngineSettings() {
     [notice, setNotice] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [engineInfo, setEngineInfo] = useState<QbitEngineInfo | null>(null);
+    [engineInfo, setEngineInfo] = useState<QbitEngineInfo | null>(null),
+    [piaStatus, setPiaStatus] = useState<PiaProxyStatus | null>(null),
+    [piaUsername, setPiaUsername] = useState(""),
+    [piaPassword, setPiaPassword] = useState("");
   useEffect(() => {
-    api.enginePreferences().then(setPreferences).catch((error) =>
+    Promise.all([api.enginePreferences(), api.piaStatus()]).then(([value, pia]) => {
+      setPreferences(value);
+      setPiaStatus(pia);
+      setPiaUsername(pia.username ?? "");
+    }).catch((error) =>
       setError(
         error instanceof Error
           ? error.message
@@ -1192,6 +1254,38 @@ function EngineSettings() {
     try { setEngineInfo(await api.engineInfo()); }
     catch (error) { setError(error instanceof Error ? error.message : "Diagnostics could not be loaded"); }
   }
+  async function connectPia() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const status = await api.connectPia(piaUsername, piaPassword);
+      setPiaStatus(status);
+      setPiaPassword("");
+      setPreferences(await api.enginePreferences());
+      setNotice("PIA SOCKS5 is configured for all qBittorrent traffic.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "PIA settings were rejected");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function disconnectPia() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      setPiaStatus(await api.disconnectPia());
+      setPiaUsername("");
+      setPiaPassword("");
+      setPreferences(await api.enginePreferences());
+      setNotice("PIA routing is disabled.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "PIA could not be disconnected");
+    } finally {
+      setBusy(false);
+    }
+  }
   useEffect(() => { if (section === "diagnostics") void loadEngineInfo(); }, [section]);
   const sections: Array<[EngineSection, string, typeof Download]> = [
     ["downloads", "Downloads", Download],
@@ -1201,6 +1295,7 @@ function EngineSettings() {
     ["bittorrent", "BitTorrent", ShieldCheck],
     ["seeding", "Seeding", Upload],
     ["scheduler", "Scheduler", Gauge],
+    ["pia", "PIA", ShieldCheck],
     ["proxy", "Proxy", Network],
     ["diagnostics", "Diagnostics", AlertTriangle],
   ];
@@ -1297,6 +1392,35 @@ function EngineSettings() {
               <div className="engine-field-row"><NumberSetting label="End hour" value={preferences.scheduleToHour} min={0} max={23} onChange={(value) => update("scheduleToHour", value)} /><NumberSetting label="End minute" value={preferences.scheduleToMinute} min={0} max={59} onChange={(value) => update("scheduleToMinute", value)} /></div>
               <label className="engine-field">Active days<select value={preferences.schedulerDays} onChange={(event) => update("schedulerDays", Number(event.target.value))}><option value={0}>Every day</option><option value={1}>Weekdays</option><option value={2}>Weekends</option><option value={3}>Monday</option><option value={4}>Tuesday</option><option value={5}>Wednesday</option><option value={6}>Thursday</option><option value={7}>Friday</option><option value={8}>Saturday</option><option value={9}>Sunday</option></select></label>
             </>
+          ) : section === "pia" ? (
+            <>
+              <h3>Private Internet Access</h3>
+              <p className="engine-help">
+                Route qBittorrent peer, tracker, and hostname traffic through PIA's
+                authenticated SOCKS5 service. This masks the torrent client's public IP,
+                but SOCKS5 is a proxy—not an encrypted VPN tunnel.
+              </p>
+              {piaStatus?.configured && (
+                <div className="settings-success"><CheckCircle2 /> PIA routing is configured</div>
+              )}
+              <label className="engine-field">
+                PIA SOCKS5 username
+                <input autoComplete="username" value={piaUsername} onChange={(event) => setPiaUsername(event.target.value)} />
+                <small>Use the separate proxy username generated in your PIA client control panel.</small>
+              </label>
+              <label className="engine-field">
+                PIA SOCKS5 password
+                <input type="password" autoComplete="current-password" value={piaPassword} placeholder={piaStatus?.configured ? "Saved — enter a password to reconnect" : "Required"} onChange={(event) => setPiaPassword(event.target.value)} />
+                <small>The password is sent only to your Harbor server and is never returned to the desktop.</small>
+              </label>
+              <ReadOnlySetting label="PIA proxy endpoint" value={`${piaStatus?.host ?? "proxy-nl.privateinternetaccess.com"}:${piaStatus?.port ?? 1080}`} hint="Managed by Harbor's PIA preset." />
+              <div className="engine-actions">
+                <button className="primary" disabled={busy || !piaUsername.trim() || !piaPassword} onClick={connectPia}>
+                  <ShieldCheck /> {busy ? "Applying…" : piaStatus?.configured ? "Reconnect PIA" : "Connect PIA"}
+                </button>
+                {piaStatus?.configured && <button className="quiet" disabled={busy} onClick={disconnectPia}>Disconnect</button>}
+              </div>
+            </>
           ) : section === "proxy" ? (
             <>
               <h3>Proxy</h3>
@@ -1336,8 +1460,8 @@ function TextSetting({ label, value, onChange }: { label: string; value: string;
 function SpeedSetting({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   return <label className="engine-field">{label}<div className="unit-input"><input type="number" min={0} value={Math.round(value / 1024)} onChange={(event) => onChange(Number(event.target.value) * 1024)} /><span>KiB/s</span></div><small>0 means unlimited.</small></label>;
 }
-function ReadOnlySetting({ label, value }: { label: string; value: string }) {
-  return <label className="engine-field">{label}<input value={value} readOnly /><small>Managed by Harbor's Docker storage mapping for safety.</small></label>;
+function ReadOnlySetting({ label, value, hint = "Managed by Harbor's Docker storage mapping for safety." }: { label: string; value: string; hint?: string }) {
+  return <label className="engine-field">{label}<input value={value} readOnly /><small>{hint}</small></label>;
 }
 function PathField({
   label,

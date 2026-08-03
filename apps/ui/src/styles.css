@@ -147,6 +147,39 @@ select {
   display: flex;
   gap: 10px;
 }
+.privacy-status {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 245px;
+  padding: 9px 13px;
+  border: 1px solid #2a3a40;
+  border-radius: 12px;
+  background: #10171a;
+  color: #d7e3e5;
+  text-align: left;
+  cursor: pointer;
+}
+.privacy-status > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.privacy-status strong { font-size: 11px; }
+.privacy-status small { color: var(--muted); font-size: 9px; }
+.privacy-status-icon { position: relative; display: grid; place-items: center; }
+.privacy-status-icon svg { width: 20px; color: #d08472; }
+.privacy-status-icon i {
+  position: absolute;
+  right: -3px;
+  bottom: 0;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #10171a;
+  border-radius: 50%;
+  background: #d08472;
+}
+.privacy-status.online { border-color: #285047; background: #132521; }
+.privacy-status.online .privacy-status-icon svg { color: #83d3c5; }
+.privacy-status.online .privacy-status-icon i { background: #69c6b6; }
+.engine-help { margin: 0 0 5px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.engine-actions { display: flex; align-items: center; gap: 10px; }
 .primary,
 .connection,
 .quiet {

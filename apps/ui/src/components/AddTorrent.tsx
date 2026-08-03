@@ -15,12 +15,14 @@ export function AddTorrent({
   close,
   added,
   initialFile,
+  initialMagnet,
 }: {
   close: () => void;
   added: () => void;
   initialFile?: { name: string; base64: string } | null;
+  initialMagnet?: string;
 }) {
-  const [magnet, setMagnet] = useState("");
+  const [magnet, setMagnet] = useState(initialMagnet ?? "");
   const [torrentFile, setTorrentFile] = useState<{
     name: string;
     base64: string;

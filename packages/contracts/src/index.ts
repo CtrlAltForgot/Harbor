@@ -152,6 +152,12 @@ export interface QbitEngineInfo {
   freeSpace: number;
   recentLogs: Array<{ id: number; timestamp: number; type: number; message: string }>;
 }
+export interface PiaProxyStatus {
+  configured: boolean;
+  host: string;
+  port: number;
+  username?: string;
+}
 export interface AddTorrentRequest {
   magnet?: string;
   torrentBase64?: string;

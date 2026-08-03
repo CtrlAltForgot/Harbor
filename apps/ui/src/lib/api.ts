@@ -3,6 +3,7 @@ import type {
   HarborSettings,
   QbitEngineInfo,
   QbitPreferences,
+  PiaProxyStatus,
   ServerStatus,
   Torrent,
 } from "@harbor/contracts";
@@ -152,6 +153,14 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(input),
     }),
+  piaStatus: () => request<PiaProxyStatus>("/api/v1/engine/pia"),
+  connectPia: (username: string, password: string) =>
+    request<PiaProxyStatus>("/api/v1/engine/pia", {
+      method: "PUT",
+      body: JSON.stringify({ username, password }),
+    }),
+  disconnectPia: () =>
+    request<PiaProxyStatus>("/api/v1/engine/pia", { method: "DELETE" }),
   engineInfo: () => request<QbitEngineInfo>("/api/v1/engine/info"),
   toggleAlternativeSpeedLimits: () =>
     request<QbitEngineInfo>("/api/v1/engine/alternative-speed-limits/toggle", {

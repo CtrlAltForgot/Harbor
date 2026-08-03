@@ -1,4 +1,35 @@
-use tauri::Manager;
+use std::sync::Mutex;
+use tauri::{Emitter, Manager};
+
+struct PendingActivations(Mutex<Vec<String>>);
+
+fn supported_activations(args: impl IntoIterator<Item = String>) -> Vec<String> {
+    args.into_iter()
+        .filter_map(|arg| {
+            if arg.to_ascii_lowercase().starts_with("magnet:?") {
+                return Some(arg);
+            }
+            if let Ok(url) = reqwest::Url::parse(&arg) {
+                if url.scheme() != "file" {
+                    return None;
+                }
+                let path = url.to_file_path().ok()?;
+                return (path
+                    .extension()
+                    .and_then(|value| value.to_str())
+                    .map(|value| value.eq_ignore_ascii_case("torrent"))
+                    == Some(true))
+                .then(|| path.to_string_lossy().into_owned());
+            }
+            arg.to_ascii_lowercase().ends_with(".torrent").then_some(arg)
+        })
+        .collect()
+}
+
+#[tauri::command]
+fn take_pending_activations(state: tauri::State<'_, PendingActivations>) -> Vec<String> {
+    std::mem::take(&mut *state.0.lock().expect("pending activation lock"))
+}
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -73,14 +104,21 @@ pub fn run() {
     if std::env::var_os("WAYLAND_DISPLAY").is_some() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
+    let initial_activations = supported_activations(std::env::args().skip(1));
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        .manage(PendingActivations(Mutex::new(initial_activations)))
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.unminimize();
                 let _ = window.set_focus();
             }
+            let activations = supported_activations(args.into_iter().skip(1));
+            if !activations.is_empty() {
+                let _ = app.emit("harbor-open", activations);
+            }
         }))
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             use tauri::{
@@ -116,14 +154,14 @@ pub fn run() {
                 let _ = window.hide();
             }
         })
-        .invoke_handler(tauri::generate_handler![http_request, read_torrent_file])
+        .invoke_handler(tauri::generate_handler![http_request, read_torrent_file, take_pending_activations])
         .run(tauri::generate_context!())
         .expect("error while running Harbor");
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{http_request, read_torrent_file};
+    use super::{http_request, read_torrent_file, supported_activations};
     use std::io::{Read, Write};
     use std::net::TcpListener;
 
@@ -186,5 +224,19 @@ mod tests {
         assert!(!dropped.bytes.is_empty());
         let _ = std::fs::remove_file(path);
         assert!(read_torrent_file("/tmp/not-a-torrent.txt".into()).is_err());
+    }
+
+    #[test]
+    fn activation_arguments_accept_only_magnets_and_torrent_files() {
+        let values = supported_activations([
+            "harbor-desktop".into(),
+            "magnet:?xt=urn:btih:abc".into(),
+            "file:///tmp/My%20File.torrent".into(),
+            "https://example.com/not-a-magnet".into(),
+        ]);
+        assert_eq!(values, [
+            "magnet:?xt=urn:btih:abc",
+            "/tmp/My File.torrent",
+        ]);
     }
 }
