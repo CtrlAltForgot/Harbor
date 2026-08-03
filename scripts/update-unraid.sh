@@ -17,6 +17,13 @@ docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is required."
 say "Downloading the latest Harbor source"
 git pull --ff-only
 
+# A pull can replace this script while the old process is still executing it.
+# Restart once so migrations and prompts always come from the newly pulled version.
+if [[ "${HARBOR_UPDATE_REEXEC:-0}" != 1 ]]; then
+  export HARBOR_UPDATE_REEXEC=1
+  exec "$0" "$@"
+fi
+
 if ! grep -q '^PIA_VPN_USERNAME=' .env || ! grep -q '^PIA_VPN_PASSWORD=' .env || ! grep -q '^LAN_NETWORK=' .env; then
   say "This update migrates qBittorrent into PIA's VPN kill-switch container"
   exec ./scripts/install-unraid.sh
