@@ -11,6 +11,7 @@ Base URL: `http://SERVER:7331`. All `/api/v1/*` routes except pairing require `A
 | PUT | `/api/v1/settings` | Validate and save folder/provider settings |
 | GET | `/api/v1/engine/preferences` | Read Harbor's supported qBittorrent preferences (passwords are never returned) |
 | PUT | `/api/v1/engine/preferences` | Validate, write, and read back qBittorrent preferences |
+| GET | `/api/v1/engine/pia` | Report whether the PIA OpenVPN kill-switch container is configured and online |
 | GET | `/api/v1/engine/info` | Version, connection/free-space state, speed mode, and sanitized recent logs |
 | POST | `/api/v1/engine/alternative-speed-limits/toggle` | Toggle alternative speed limits immediately |
 | GET | `/api/v1/torrents` | Current torrent snapshot |

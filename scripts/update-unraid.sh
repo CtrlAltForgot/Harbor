@@ -17,8 +17,14 @@ docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is required."
 say "Downloading the latest Harbor source"
 git pull --ff-only
 
-say "Rebuilding only the Harbor companion (your qBittorrent configuration and downloads are preserved)"
-docker compose up -d --build --no-deps harbor
+if ! grep -q '^PIA_VPN_USERNAME=' .env || ! grep -q '^PIA_VPN_PASSWORD=' .env || ! grep -q '^LAN_NETWORK=' .env; then
+  say "This update migrates qBittorrent into PIA's VPN kill-switch container"
+  exec ./scripts/install-unraid.sh
+fi
+
+say "Updating the PIA-protected qBittorrent container and rebuilding Harbor"
+docker compose pull qbittorrent
+docker compose up -d --build harbor
 
 harbor_port="$(sed -n 's/^HARBOR_HOST_PORT=//p' .env | tail -n 1)"
 harbor_port="${harbor_port:-7331}"
@@ -32,4 +38,5 @@ done
 say "Update complete"
 printf '%s\n' \
   "Harbor companion: http://YOUR-UNRAID-IP:$harbor_port" \
-  "Existing pairing tokens, settings, history, qBittorrent state, and downloaded files were preserved."
+  "Existing pairing tokens, settings, history, qBittorrent state, and downloaded files were preserved." \
+  "qBittorrent traffic is protected by the PIA VPN container's kill switch."

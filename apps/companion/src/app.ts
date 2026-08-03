@@ -7,7 +7,7 @@ import type {
   AddTorrentRequest,
   EventMessage,
   HarborSettings,
-  PiaProxyStatus,
+  PiaVpnStatus,
   QbitEngineInfo,
   QbitPreferences,
   OrganizationProgress,
@@ -98,23 +98,6 @@ export const qbitPreferencesSchema = z.object({
   proxyPasswordConfigured: z.boolean(),
   proxyTorrentsOnly: z.boolean(),
 });
-
-export const PIA_PROXY_HOST = "proxy-nl.privateinternetaccess.com";
-export const PIA_PROXY_PORT = 1080;
-
-export function piaProxyPreferences(username: string, password: string) {
-  return {
-    proxy_type: 4,
-    proxy_ip: PIA_PROXY_HOST,
-    proxy_port: PIA_PROXY_PORT,
-    proxy_peer_connections: true,
-    proxy_auth_enabled: true,
-    proxy_username: username,
-    proxy_password: password,
-    proxy_torrents_only: false,
-    proxy_hostname_lookup: true,
-  };
-}
 
 export async function buildApp(overrides: Partial<Config> = {}) {
   const config = loadConfig(overrides);
@@ -250,42 +233,17 @@ export async function buildApp(overrides: Partial<Config> = {}) {
     });
     return confirmed;
   });
-  app.get("/api/v1/engine/pia", async (request, reply): Promise<PiaProxyStatus | unknown> => {
+  app.get("/api/v1/engine/pia", async (request, reply): Promise<PiaVpnStatus | unknown> => {
     if (!qbit)
       return reply.code(400).send({ error: "qBittorrent is not configured" });
-    return mapPiaProxyStatus(await qbit.preferences());
-  });
-  app.put("/api/v1/engine/pia", async (request, reply): Promise<PiaProxyStatus | unknown> => {
-    if (!qbit)
-      return reply.code(400).send({ error: "qBittorrent is not configured" });
-    const parsed = z.object({
-      username: z.string().trim().min(1).max(255),
-      password: z.string().min(1).max(1024),
-    }).safeParse(request.body);
-    if (!parsed.success)
-      return reply.code(400).send({ error: "PIA SOCKS5 username and password are required" });
-    await qbit.setPreferences(piaProxyPreferences(parsed.data.username, parsed.data.password));
-    const status = mapPiaProxyStatus(await qbit.preferences());
-    if (!status.configured)
-      return reply.code(502).send({ error: "qBittorrent did not confirm the PIA proxy settings" });
-    store.audit("engine.pia_configured", null, { host: PIA_PROXY_HOST, port: PIA_PROXY_PORT });
-    return status;
-  });
-  app.delete("/api/v1/engine/pia", async (request, reply): Promise<PiaProxyStatus | unknown> => {
-    if (!qbit)
-      return reply.code(400).send({ error: "qBittorrent is not configured" });
-    await qbit.setPreferences({
-      proxy_type: -1,
-      proxy_ip: "",
-      proxy_port: 0,
-      proxy_peer_connections: false,
-      proxy_auth_enabled: false,
-      proxy_username: "",
-      proxy_password: "",
-      proxy_hostname_lookup: false,
-    });
-    store.audit("engine.pia_disconnected", null, {});
-    return mapPiaProxyStatus(await qbit.preferences());
+    let connected = false;
+    if (config.vpnEnabled) {
+      try {
+        await qbit.health();
+        connected = true;
+      } catch {}
+    }
+    return { configured: config.vpnEnabled, connected, provider: "pia", client: "openvpn" };
   });
   app.get("/api/v1/engine/info", async (request, reply): Promise<QbitEngineInfo | unknown> => {
     if (!qbit)
@@ -1059,22 +1017,6 @@ function mapQbitPreferences(values: Record<string, unknown>): QbitPreferences {
     proxyPassword: "",
     proxyPasswordConfigured: text("proxy_password").length > 0,
     proxyTorrentsOnly: bool("proxy_torrents_only"),
-  };
-}
-
-function mapPiaProxyStatus(values: Record<string, unknown>): PiaProxyStatus {
-  const configured = Number(values.proxy_type) === 4
-    && String(values.proxy_ip ?? "") === PIA_PROXY_HOST
-    && Number(values.proxy_port) === PIA_PROXY_PORT
-    && Boolean(values.proxy_peer_connections)
-    && Boolean(values.proxy_auth_enabled);
-  return {
-    configured,
-    host: PIA_PROXY_HOST,
-    port: PIA_PROXY_PORT,
-    ...(configured && values.proxy_username
-      ? { username: String(values.proxy_username) }
-      : {}),
   };
 }
 

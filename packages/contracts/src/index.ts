@@ -152,11 +152,11 @@ export interface QbitEngineInfo {
   freeSpace: number;
   recentLogs: Array<{ id: number; timestamp: number; type: number; message: string }>;
 }
-export interface PiaProxyStatus {
+export interface PiaVpnStatus {
   configured: boolean;
-  host: string;
-  port: number;
-  username?: string;
+  connected: boolean;
+  provider: "pia";
+  client: "openvpn";
 }
 export interface AddTorrentRequest {
   magnet?: string;

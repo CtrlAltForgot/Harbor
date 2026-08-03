@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type {
   Category,
   HarborSettings,
-  PiaProxyStatus,
+  PiaVpnStatus,
   QbitEngineInfo,
   QbitPreferences,
   ServerStatus,
@@ -56,7 +56,7 @@ export function App() {
   const [paired, setPaired] = useState(!!connection.get()),
     [items, setItems] = useState<Torrent[]>([]),
     [status, setStatus] = useState<ServerStatus | null>(null),
-    [piaStatus, setPiaStatus] = useState<PiaProxyStatus | null>(null),
+    [piaStatus, setPiaStatus] = useState<PiaVpnStatus | null>(null),
     [adding, setAdding] = useState(false),
     [reviewing, setReviewing] = useState<Torrent | null>(null),
     [bulkRemoveOpen, setBulkRemoveOpen] = useState(false),
@@ -307,11 +307,11 @@ export function App() {
                 <p className="eyebrow">YOUR SERVER</p>
                 <h1>Downloads</h1>
               </div>
-              <button className={`privacy-status ${piaStatus?.configured && status?.engineConnected !== false ? "online" : "offline"}`} onClick={() => setView("settings")}>
+              <button className={`privacy-status ${piaStatus?.connected ? "online" : "offline"}`} onClick={() => setView("settings")}>
                 <span className="privacy-status-icon"><ShieldCheck /><i /></span>
                 <span>
-                  <strong>{piaStatus?.configured && status?.engineConnected !== false ? "PIA routing on" : "PIA routing off"}</strong>
-                  <small>{piaStatus?.configured && status?.engineConnected !== false ? "Torrent traffic configured through PIA" : "Torrent traffic uses your ISP connection"}</small>
+                  <strong>{piaStatus?.connected ? "PIA VPN online" : "PIA VPN offline"}</strong>
+                  <small>{piaStatus?.connected ? "All torrent traffic uses the VPN tunnel" : "Downloads are blocked by the VPN kill switch"}</small>
                 </span>
               </button>
             </header>
@@ -1215,14 +1215,11 @@ function EngineSettings() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [engineInfo, setEngineInfo] = useState<QbitEngineInfo | null>(null),
-    [piaStatus, setPiaStatus] = useState<PiaProxyStatus | null>(null),
-    [piaUsername, setPiaUsername] = useState(""),
-    [piaPassword, setPiaPassword] = useState("");
+    [piaStatus, setPiaStatus] = useState<PiaVpnStatus | null>(null);
   useEffect(() => {
     Promise.all([api.enginePreferences(), api.piaStatus()]).then(([value, pia]) => {
       setPreferences(value);
       setPiaStatus(pia);
-      setPiaUsername(pia.username ?? "");
     }).catch((error) =>
       setError(
         error instanceof Error
@@ -1253,38 +1250,6 @@ function EngineSettings() {
     setError("");
     try { setEngineInfo(await api.engineInfo()); }
     catch (error) { setError(error instanceof Error ? error.message : "Diagnostics could not be loaded"); }
-  }
-  async function connectPia() {
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      const status = await api.connectPia(piaUsername, piaPassword);
-      setPiaStatus(status);
-      setPiaPassword("");
-      setPreferences(await api.enginePreferences());
-      setNotice("PIA SOCKS5 is configured for all qBittorrent traffic.");
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "PIA settings were rejected");
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function disconnectPia() {
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      setPiaStatus(await api.disconnectPia());
-      setPiaUsername("");
-      setPiaPassword("");
-      setPreferences(await api.enginePreferences());
-      setNotice("PIA routing is disabled.");
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "PIA could not be disconnected");
-    } finally {
-      setBusy(false);
-    }
   }
   useEffect(() => { if (section === "diagnostics") void loadEngineInfo(); }, [section]);
   const sections: Array<[EngineSection, string, typeof Download]> = [
@@ -1396,30 +1361,16 @@ function EngineSettings() {
             <>
               <h3>Private Internet Access</h3>
               <p className="engine-help">
-                Route qBittorrent peer, tracker, and hostname traffic through PIA's
-                authenticated SOCKS5 service. This masks the torrent client's public IP,
-                but SOCKS5 is a proxy—not an encrypted VPN tunnel.
+                Harbor runs qBittorrent inside an encrypted PIA OpenVPN container.
+                Its kill switch prevents qBittorrent from starting when the tunnel is down.
               </p>
-              {piaStatus?.configured && (
-                <div className="settings-success"><CheckCircle2 /> PIA routing is configured</div>
-              )}
-              <label className="engine-field">
-                PIA SOCKS5 username
-                <input autoComplete="username" value={piaUsername} onChange={(event) => setPiaUsername(event.target.value)} />
-                <small>Use the separate proxy username generated in your PIA client control panel.</small>
-              </label>
-              <label className="engine-field">
-                PIA SOCKS5 password
-                <input type="password" autoComplete="current-password" value={piaPassword} placeholder={piaStatus?.configured ? "Saved — enter a password to reconnect" : "Required"} onChange={(event) => setPiaPassword(event.target.value)} />
-                <small>The password is sent only to your Harbor server and is never returned to the desktop.</small>
-              </label>
-              <ReadOnlySetting label="PIA proxy endpoint" value={`${piaStatus?.host ?? "proxy-nl.privateinternetaccess.com"}:${piaStatus?.port ?? 1080}`} hint="Managed by Harbor's PIA preset." />
-              <div className="engine-actions">
-                <button className="primary" disabled={busy || !piaUsername.trim() || !piaPassword} onClick={connectPia}>
-                  <ShieldCheck /> {busy ? "Applying…" : piaStatus?.configured ? "Reconnect PIA" : "Connect PIA"}
-                </button>
-                {piaStatus?.configured && <button className="quiet" disabled={busy} onClick={disconnectPia}>Disconnect</button>}
+              <div className={piaStatus?.connected ? "settings-success" : "connection-warning"}>
+                {piaStatus?.connected ? <CheckCircle2 /> : <AlertTriangle />}
+                {piaStatus?.connected ? "PIA VPN tunnel is online" : piaStatus?.configured ? "PIA VPN is configured but the tunnel is offline" : "PIA VPN has not been configured"}
               </div>
+              <ReadOnlySetting label="VPN provider" value="Private Internet Access" hint="Managed by Harbor's Unraid installation." />
+              <ReadOnlySetting label="VPN protocol" value="OpenVPN" hint="qBittorrent is protected by the container's network kill switch." />
+              <p className="engine-help">To add or change the PIA account, run <code>./scripts/install-unraid.sh</code> in the Harbor folder on Unraid. Credentials stay in the server's protected <code>.env</code> file and are never sent to the desktop.</p>
             </>
           ) : section === "proxy" ? (
             <>

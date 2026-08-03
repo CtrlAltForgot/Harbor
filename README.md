@@ -12,7 +12,7 @@ The repository is ready for homelab use. In addition to automated tests, Harbor 
 ## What works
 
 - Pairing-code authentication with persistent hashed client tokens
-- Real qBittorrent 5.x Web API authentication, magnet/`.torrent` intake, monitoring, complete everyday transfer controls, and a Harbor-native settings tree for downloads, networking, bandwidth schedules, queueing, seeding, proxy/privacy, and sanitized diagnostics
+- Real qBittorrent 5.x Web API authentication, magnet/`.torrent` intake, monitoring, complete everyday transfer controls, PIA OpenVPN routing with a network kill switch, and sanitized diagnostics
 - Live organization feedback with streamed copy progress, verification/finalization phases, a dedicated Sorting filter, and visually distinct sorting rows
 - Exact info-hash duplicate detection, including base32 magnets
 - SQLite queue/audit persistence and restart recovery
@@ -34,9 +34,9 @@ Development uses the safe mock engine unless `HARBOR_ENGINE=qbittorrent` is set.
 
 ## Easy installation
 
-The guided installer creates and configures a dedicated qBittorrent container on Unraid; it does not touch qBittorrent on your PC.
+The guided installer creates a dedicated binhex qBittorrent-VPN container on Unraid, collects your PIA VPN credentials privately, and installs a regional OpenVPN profile. It does not touch qBittorrent on your PC.
 
-For upgrades, run `git pull && ./scripts/update-unraid.sh` from the existing Harbor checkout on Unraid, then update/reinstall the desktop. The update script rebuilds only Harbor and preserves the qBittorrent container, downloads, configuration, pairing state, and history.
+For upgrades, run `./scripts/update-unraid.sh` from the existing Harbor checkout on Unraid, then update/reinstall the desktop. The updater preserves downloads, configuration, pairing state, and history; VPN migrations prompt for the required PIA account details.
 
 ```bash
 # On Unraid

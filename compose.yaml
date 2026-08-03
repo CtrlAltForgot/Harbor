@@ -5,6 +5,7 @@ services:
     environment:
       HARBOR_PAIRING_CODE: ${HARBOR_PAIRING_CODE:?Set HARBOR_PAIRING_CODE in .env}
       HARBOR_ENGINE: qbittorrent
+      HARBOR_VPN_ENABLED: "true"
       HARBOR_PORT: 7331
       QBITTORRENT_URL: http://qbittorrent:${QBITTORRENT_WEBUI_PORT:-8080}
       QBITTORRENT_USERNAME: ${QBITTORRENT_USERNAME:-admin}
@@ -29,21 +30,31 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: ["ALL"]
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    image: ghcr.io/binhex/arch-qbittorrentvpn:latest
     environment:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       TZ: ${TZ:-America/Chicago}
+      VPN_ENABLED: "yes"
+      VPN_USER: ${PIA_VPN_USERNAME:?Set your PIA VPN username in .env}
+      VPN_PASS: ${PIA_VPN_PASSWORD:?Set your PIA VPN password in .env}
+      VPN_PROV: pia
+      VPN_CLIENT: openvpn
+      LAN_NETWORK: ${LAN_NETWORK:?Set your Unraid LAN network in CIDR form in .env}
+      NAME_SERVERS: 1.1.1.1,1.0.0.1
+      STRICT_PORT_FORWARD: "yes"
+      ENABLE_PRIVOXY: "no"
+      ENABLE_SOCKS: "no"
+      DEBUG: "false"
       WEBUI_PORT: ${QBITTORRENT_WEBUI_PORT:-8080}
-      TORRENTING_PORT: ${TORRENTING_PORT:-6881}
     ports:
       - "${QBITTORRENT_WEBUI_PORT:-8080}:${QBITTORRENT_WEBUI_PORT:-8080}"
-      - "${TORRENTING_PORT:-6881}:${TORRENTING_PORT:-6881}"
-      - "${TORRENTING_PORT:-6881}:${TORRENTING_PORT:-6881}/udp"
     volumes:
       - ${QBITTORRENT_CONFIG_PATH:-qbittorrent-config}:/config
       - ${DOWNLOADS_ROOT:-./dev-storage}:/downloads
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
+    cap_add: ["NET_ADMIN"]
     security_opt: ["no-new-privileges:true"]
 volumes:
   harbor-config:

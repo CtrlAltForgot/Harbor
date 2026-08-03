@@ -1,6 +1,6 @@
 # Easy installation: Unraid + Nobara
 
-This installs a dedicated qBittorrent on Unraid. It does not touch qBittorrent on your PC.
+This installs a dedicated qBittorrent on Unraid inside an encrypted PIA OpenVPN container. It does not touch qBittorrent on your PC.
 
 ## What the installer does
 
@@ -8,7 +8,8 @@ The Unraid installer asks for three folders and two optional ports, then automat
 
 - creates persistent appdata/download folders and mounts your existing media share once;
 - generates a Harbor pairing code and qBittorrent password;
-- starts the LinuxServer qBittorrent container;
+- asks for your PIA VPN login and preferred region;
+- starts the binhex qBittorrent-VPN container with its network kill switch enabled;
 - captures qBittorrent's temporary first-boot password without displaying it;
 - replaces it with the generated permanent password;
 - builds and starts Harbor;
@@ -26,7 +27,7 @@ You need:
 - a Nobara desktop with `sudo` access;
 - the host path of your existing media share, commonly `/mnt/user/media`.
 
-Harbor creates a dedicated qBittorrent on Unraid. Your existing PC qBittorrent is not changed.
+Harbor creates a dedicated PIA-protected qBittorrent on Unraid. Your existing PC qBittorrent is not changed. Have your normal PIA VPN username and password ready; these are stored only in the protected server-side `.env` file.
 
 ## Step 1: download Harbor on Unraid
 
@@ -93,7 +94,7 @@ Closing Harbor Desktop hides it in the system tray by default. Use **Open Harbor
 
 Harbor Desktop permits only one running instance per login session. Launching Harbor again from the application menu restores, unminimizes, and focuses the existing window, including when it was hidden in the tray.
 
-The **qBittorrent settings** area uses a category list on the left and live engine settings on the right. It covers download behavior, connection limits, global and scheduled alternative speeds, queueing, seeding limits, DHT/PeX/LSD, encryption, authenticated proxies, and sanitized engine diagnostics. Settings are written to qBittorrent and read back before Harbor reports success. Container download paths are intentionally read-only because changing them outside Harbor could bypass organization and deletion safeguards.
+The **qBittorrent settings** area uses a category list on the left and live engine settings on the right. Its PIA page reports whether the encrypted tunnel is online. The container kill switch prevents qBittorrent from running if OpenVPN cannot connect. Other pages cover download behavior, connection limits, speeds, queueing, seeding, discovery, encryption, and sanitized diagnostics.
 
 ## Step 3: install Harbor Desktop on Nobara
 
@@ -129,7 +130,7 @@ git pull
 ./scripts/update-unraid.sh
 ```
 
-This pulls the current source and rebuilds only the Harbor companion. It preserves qBittorrent, downloads, pairing tokens, settings, and history. Then update the Nobara desktop from its Harbor repository:
+This pulls the current source, updates the VPN-protected qBittorrent container, and rebuilds Harbor. It preserves downloads, pairing tokens, settings, and history. A VPN migration asks for your PIA credentials once. Then update the Nobara desktop from its Harbor repository:
 
 ```bash
 git pull

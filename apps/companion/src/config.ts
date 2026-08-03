@@ -9,6 +9,7 @@ export interface Config {
   qbitUrl: string;
   qbitUsername: string;
   qbitPassword: string;
+  vpnEnabled: boolean;
   incompleteDir: string;
   uiDir?: string;
   mediaRoot: string;
@@ -38,6 +39,8 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
       overrides.qbitUsername ?? process.env.QBITTORRENT_USERNAME ?? "admin",
     qbitPassword:
       overrides.qbitPassword ?? process.env.QBITTORRENT_PASSWORD ?? "",
+    vpnEnabled:
+      overrides.vpnEnabled ?? process.env.HARBOR_VPN_ENABLED === "true",
     incompleteDir:
       overrides.incompleteDir ??
       process.env.HARBOR_INCOMPLETE_DIR ??
