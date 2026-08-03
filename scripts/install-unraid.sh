@@ -59,6 +59,11 @@ if [[ -f .env ]]; then
   [[ -n "$saved_lan_network" && -z "${LAN_NETWORK+x}" ]] && lan_network="$saved_lan_network"
 fi
 
+if [[ "$pia_region" == "us_chicago" ]]; then
+  say "Switching PIA from Chicago to the port-forwarding Toronto endpoint."
+  pia_region="ca_toronto"
+fi
+
 if [[ "${HARBOR_NONINTERACTIVE:-0}" != 1 ]]; then
   say "This installs a dedicated qBittorrent and Harbor stack on Unraid. Your PC qBittorrent is untouched."
   printf 'Appdata folder [%s]: ' "$appdata_root"; read -r answer; appdata_root="${answer:-$appdata_root}"

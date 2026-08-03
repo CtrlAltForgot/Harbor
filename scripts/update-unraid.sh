@@ -24,7 +24,7 @@ if [[ "${HARBOR_UPDATE_REEXEC:-0}" != 1 ]]; then
   exec "$0" "$@"
 fi
 
-if ! grep -q '^PIA_VPN_USERNAME=' .env || ! grep -q '^PIA_VPN_PASSWORD=' .env || ! grep -q '^LAN_NETWORK=' .env; then
+if ! grep -q '^PIA_VPN_USERNAME=' .env || ! grep -q '^PIA_VPN_PASSWORD=' .env || ! grep -q '^LAN_NETWORK=' .env || grep -q '^PIA_OPENVPN_REGION=us_chicago$' .env; then
   say "This update migrates qBittorrent into PIA's VPN kill-switch container"
   exec ./scripts/install-unraid.sh
 fi
