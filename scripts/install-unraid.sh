@@ -36,7 +36,7 @@ default_lan_network="${LAN_NETWORK:-$(ip -4 route show 2>/dev/null | awk '$1 ~ /
 default_lan_network="${default_lan_network:-192.168.1.0/24}"
 pia_username="${PIA_VPN_USERNAME:-}"
 pia_password="${PIA_VPN_PASSWORD:-}"
-pia_region="${PIA_OPENVPN_REGION:-us_chicago}"
+pia_region="${PIA_OPENVPN_REGION:-ca_toronto}"
 lan_network="$default_lan_network"
 if [[ -f .env ]]; then
   saved_config_path="$(read_saved_value HARBOR_CONFIG_PATH)"

@@ -28,6 +28,7 @@ You need:
 - the host path of your existing media share, commonly `/mnt/user/media`.
 
 Harbor creates a dedicated PIA-protected qBittorrent on Unraid. Your existing PC qBittorrent is not changed. Have your normal PIA VPN username and password ready; these are stored only in the protected server-side `.env` file.
+The installer defaults to PIA's Toronto endpoint because it supports the incoming port forwarding used by the strict qBittorrent kill-switch configuration.
 
 ## Step 1: download Harbor on Unraid
 
