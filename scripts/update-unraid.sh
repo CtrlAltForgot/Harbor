@@ -31,6 +31,7 @@ fi
 
 say "Updating the PIA-protected qBittorrent container and rebuilding Harbor"
 docker compose pull qbittorrent
+docker compose up -d --force-recreate qbittorrent
 docker compose up -d --build harbor
 
 harbor_port="$(sed -n 's/^HARBOR_HOST_PORT=//p' .env | tail -n 1)"
