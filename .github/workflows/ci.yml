@@ -30,4 +30,7 @@ jobs:
         env:
           HARBOR_PAIRING_CODE: validation-only
           QBITTORRENT_PASSWORD: validation-only
+          PIA_VPN_USERNAME: validation-only
+          PIA_VPN_PASSWORD: validation-only
+          LAN_NETWORK: 192.168.1.0/24
         run: docker compose config --quiet
