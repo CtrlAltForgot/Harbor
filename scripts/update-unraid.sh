@@ -14,8 +14,13 @@ command -v curl >/dev/null || fail "curl is required for the health check."
 docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is required."
 [[ -f .env ]] || fail "No Harbor .env was found here. Run ./scripts/install-unraid.sh for the first installation."
 
-say "Downloading the latest Harbor source"
-git pull --ff-only
+say "Downloading the latest stable Harbor release"
+git fetch --force origin 'refs/tags/v*:refs/tags/v*'
+target_version="${HARBOR_VERSION:-$(git tag --list 'v[0-9]*' --sort=-version:refname | head -n 1)}"
+[[ -n "$target_version" ]] || fail "No Harbor release tags were found."
+git rev-parse --verify --quiet "refs/tags/$target_version^{commit}" >/dev/null || fail "Harbor release $target_version was not found."
+git diff --quiet && git diff --cached --quiet || fail "This checkout has local changes. Preserve or discard them before updating."
+git checkout --detach "$target_version"
 
 # A pull can replace this script while the old process is still executing it.
 # Restart once so migrations and prompts always come from the newly pulled version.
@@ -45,6 +50,7 @@ done
 
 say "Update complete"
 printf '%s\n' \
+  "Harbor release:   $target_version" \
   "Harbor companion: http://YOUR-UNRAID-IP:$harbor_port" \
   "Existing pairing tokens, settings, history, qBittorrent state, and downloaded files were preserved." \
   "qBittorrent traffic is protected by the PIA VPN container's kill switch."

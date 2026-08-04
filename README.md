@@ -1,6 +1,7 @@
 # Harbor
 
 [![Verify Harbor](https://github.com/CtrlAltForgot/Harbor/actions/workflows/ci.yml/badge.svg)](https://github.com/CtrlAltForgot/Harbor/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/CtrlAltForgot/Harbor)](https://github.com/CtrlAltForgot/Harbor/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-69c6b6.svg)](LICENSE)
 
 Harbor is a personal homelab torrent controller for Nobara and Unraid. The desktop sends magnets or `.torrent` files to the Harbor companion; Harbor controls qBittorrent on the server, monitors transfers, classifies completed content, and copies it into configured media folders only after verifying the result.
@@ -36,18 +37,19 @@ Development uses the safe mock engine unless `HARBOR_ENGINE=qbittorrent` is set.
 
 The guided installer creates a dedicated binhex qBittorrent-VPN container on Unraid, collects your PIA VPN credentials privately, and installs a regional OpenVPN profile. It does not touch qBittorrent on your PC.
 
-For upgrades, run `./scripts/update-unraid.sh` from the existing Harbor checkout on Unraid, then update/reinstall the desktop. The updater preserves downloads, configuration, pairing state, and history; VPN migrations prompt for the required PIA account details.
+For upgrades, run `./scripts/update-unraid.sh` from the existing Harbor checkout on Unraid, then install the desktop RPM from the same release. The updater selects the newest versioned release rather than the changing development branch and preserves downloads, configuration, pairing state, and history.
 
 ```bash
 # On Unraid
-git clone --depth 1 https://github.com/CtrlAltForgot/Harbor.git /mnt/user/appdata/harbor-source
+git clone --branch v0.1.0 --depth 1 https://github.com/CtrlAltForgot/Harbor.git /mnt/user/appdata/harbor-source
 cd /mnt/user/appdata/harbor-source
 ./scripts/install-unraid.sh
 
 # On Nobara
-git clone --depth 1 https://github.com/CtrlAltForgot/Harbor.git ~/Harbor
-cd ~/Harbor
-./scripts/install-desktop.sh
+curl -fLO https://github.com/CtrlAltForgot/Harbor/releases/download/v0.1.0/Harbor-0.1.0-29.x86_64.rpm
+sudo dnf install -y ./Harbor-0.1.0-29.x86_64.rpm
+xdg-mime default Harbor.desktop x-scheme-handler/magnet
+xdg-mime default Harbor.desktop application/x-bittorrent
 ```
 
 The Nobara installer registers Harbor as the default handler for browser magnet

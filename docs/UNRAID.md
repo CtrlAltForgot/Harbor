@@ -59,7 +59,7 @@ Map these container paths to explicit Unraid host paths:
 
 The container runs as PUID/PGID 1000 in Compose by default. Set `PUID` and `PGID` to the owner of your Unraid shares. Harbor reports every missing or unwritable mapping in its status response and desktop banner.
 
-The normal installer builds from the checked-out source so it remains usable even if a registry is unavailable. GitHub Actions also publishes the companion image as `ghcr.io/ctrlaltforgot/harbor:latest`; the draft XML template points to that image for future Community Applications distribution.
+The normal installer builds from the checked-out release source so it remains usable even if a registry is unavailable. GitHub Actions also publishes immutable version tags such as `ghcr.io/ctrlaltforgot/harbor:0.1.0`; `latest` advances only for a versioned release, while development builds use `edge`.
 
 ## 4. Cache, mover, and filesystem rules
 

@@ -35,7 +35,7 @@ The installer defaults to PIA's Toronto endpoint because it supports the incomin
 Open **Unraid → Terminal** and clone the GitHub repository into persistent appdata:
 
 ```bash
-git clone --depth 1 https://github.com/CtrlAltForgot/Harbor.git /mnt/user/appdata/harbor-source
+git clone --branch v0.1.0 --depth 1 https://github.com/CtrlAltForgot/Harbor.git /mnt/user/appdata/harbor-source
 cd /mnt/user/appdata/harbor-source
 ```
 
@@ -43,7 +43,7 @@ If the `git` command is unavailable, use the GitHub archive instead:
 
 ```bash
 mkdir -p /mnt/user/appdata/harbor-source
-curl -fsSL https://github.com/CtrlAltForgot/Harbor/archive/refs/heads/main.tar.gz \
+curl -fsSL https://github.com/CtrlAltForgot/Harbor/releases/download/v0.1.0/Harbor-0.1.0-source.tar.gz \
   | tar -xz --strip-components=1 -C /mnt/user/appdata/harbor-source
 cd /mnt/user/appdata/harbor-source
 ```
@@ -99,19 +99,18 @@ The **qBittorrent settings** area uses a category list on the left and live engi
 
 ## Step 3: install Harbor Desktop on Nobara
 
-Open a terminal on the Nobara PC. Download Harbor and run the desktop installer:
+Open a terminal on the Nobara PC. Download the RPM and checksum manifest from the same release used on Unraid, verify it, and install it:
 
 ```bash
-git clone --depth 1 https://github.com/CtrlAltForgot/Harbor.git ~/Harbor
-cd ~/Harbor
-./scripts/install-desktop.sh
+curl -fLO https://github.com/CtrlAltForgot/Harbor/releases/download/v0.1.0/Harbor-0.1.0-29.x86_64.rpm
+curl -fLO https://github.com/CtrlAltForgot/Harbor/releases/download/v0.1.0/SHA256SUMS
+sha256sum --ignore-missing -c SHA256SUMS
+sudo dnf install -y ./Harbor-0.1.0-29.x86_64.rpm
+xdg-mime default Harbor.desktop x-scheme-handler/magnet
+xdg-mime default Harbor.desktop application/x-bittorrent
 ```
 
-If you already cloned Harbor elsewhere, use that directory instead. The script installs the included RPM using `dnf`, and Harbor then appears in the application menu. The included RPM SHA-256 is:
-
-```text
-16d45b395f0fa09c3037a5a52682bec3ceb7d4ca3e4bf8a5309e54f9dbcdfb73
-```
+Harbor then appears in the application menu. Release assets and their checksums are also available on the [GitHub Releases page](https://github.com/CtrlAltForgot/Harbor/releases/latest). Developers building from a source checkout can instead run `./scripts/install-desktop.sh`.
 
 ## Step 4: pair
 
@@ -127,40 +126,20 @@ If the pairing code or Unraid address changes later, open the gear button, use *
 The desktop and Unraid companion must be updated together. From the Harbor repository in an **Unraid terminal**, run:
 
 ```bash
-git pull
 ./scripts/update-unraid.sh
 ```
 
-This pulls the current source, updates the VPN-protected qBittorrent container, and rebuilds Harbor. It preserves downloads, pairing tokens, settings, and history. A VPN migration asks for your PIA credentials once. Then update the Nobara desktop from its Harbor repository:
+This checks out the newest versioned release, updates the VPN-protected qBittorrent container, and rebuilds Harbor. It preserves downloads, pairing tokens, settings, and history. Set `HARBOR_VERSION=v0.1.0` before the command to select a specific release. A VPN migration asks for your PIA credentials once. Then download and install the RPM from that same GitHub Release on Nobara. Do not mix desktop and companion versions. Developers using a source checkout can select the matching tag:
 
 ```bash
-git pull
+git fetch --tags
+git checkout --detach v0.1.0
 ./scripts/install-desktop.sh
 ```
 
 You can also use the same interface at `http://YOUR-UNRAID-IP:7331` in a browser.
 
-## Updating
-
-For a Git installation on Unraid:
-
-```bash
-cd /mnt/user/appdata/harbor-source
-git pull --ff-only
-./scripts/install-unraid.sh
-```
-
-Accept the same answers. The installer preserves the generated qBittorrent password and Harbor pairing code, rebuilds Harbor, and leaves the persistent queue/configuration in appdata.
-
-For a Git installation on Nobara:
-
-```bash
-cd ~/Harbor
-git pull --ff-only
-./scripts/install-desktop.sh
-```
-
-Archive-based installs can be updated by downloading the current archive into a new source folder and rerunning the installer. Never overwrite or publish the generated `.env` file.
+Archive-based installs can be updated by downloading a newer release archive into a new source folder and rerunning the installer. Preserve the existing `.env` file, and never publish it.
 
 ## Useful commands
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — Unreleased
+## 0.1.0 — 2026-08-04
 
 - Added a confirmed Clear completed action to the Completed tab that bulk-removes organized torrents from qBittorrent and Harbor while always preserving verified library files.
 - Made Progress sorting use live organization progress for Sorting rows, placing actively processed items ahead of 0% waiting jobs instead of treating every completed download as 100%.

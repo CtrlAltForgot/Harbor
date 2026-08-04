@@ -1,0 +1,61 @@
+name: Publish Harbor release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          test "${GITHUB_REF_NAME}" = "v${package_version}" || {
+            echo "Tag ${GITHUB_REF_NAME} does not match package version v${package_version}." >&2
+            exit 1
+          }
+          test "$(node -p "require('./apps/desktop/package.json').version")" = "$package_version"
+          test "$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")" = "$package_version"
+      - name: Install Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libappindicator3-dev librsvg2-dev libwebkit2gtk-4.1-dev patchelf rpm
+      - name: Install dependencies and verify
+        run: npm ci
+      - run: npm run check
+      - name: Build desktop RPM
+        run: npm run build -w @harbor/desktop
+      - name: Stage release artifacts
+        shell: bash
+        run: |
+          mkdir -p dist
+          rpm_path="$(find apps/desktop/src-tauri/target/release/bundle/rpm -maxdepth 1 -type f -name '*.rpm' -print -quit)"
+          test -n "$rpm_path"
+          cp "$rpm_path" dist/
+          git archive --format=tar.gz --prefix="Harbor-${GITHUB_REF_NAME#v}/" -o "dist/Harbor-${GITHUB_REF_NAME#v}-source.tar.gz" HEAD
+          cd dist
+          sha256sum ./* > SHA256SUMS
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            Harbor ${{ github.ref_name }} is the first versioned homelab release.
+
+            Install and update instructions are in the [easy installation guide](https://github.com/CtrlAltForgot/Harbor/blob/${{ github.ref_name }}/docs/EASY_INSTALL.md).
+
+            Verify downloaded artifacts with `SHA256SUMS`. The companion container is published as `ghcr.io/ctrlaltforgot/harbor:${{ github.ref_name }}` and `ghcr.io/ctrlaltforgot/harbor:latest`.
+          files: dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
